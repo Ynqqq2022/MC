@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+*.vsidx
+/.vs/MC
+/Binaries/Win64
+*.xml
+/Config
+/Intermediate
+/Saved
+*.zip
