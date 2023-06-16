@@ -66,9 +66,12 @@ void UTerrainGenerationComponent::AddChunks()
 		{
 			const FIntPoint chunkIndexInWorld = playerChunkPosition + FIntPoint{x, y};
 			const FVector chunkLocationInWorld = FVector(chunkIndexInWorld.X * chunkXSize, chunkIndexInWorld.Y * chunkYSize, 0.0f);
+			//player所在chunk周围一圈的chunk创建碰撞。
+			bool hasCollision = ((playerChunkPosition - chunkIndexInWorld).Size() <= 1.415);
 			if(chunks.Contains(chunkIndexInWorld))
 			{
-				;
+				//若chunk已存在，则根据hasCollision更新是否创建碰撞。
+				chunks[chunkIndexInWorld]->UpdateCollision(hasCollision);
 			}
 			else
 			{
@@ -79,10 +82,18 @@ void UTerrainGenerationComponent::AddChunks()
 				newChunk->chunkYBlocks = chunkYBlocks;
 				newChunk->chunkZBlocks = chunkZBlocks;
 				newChunk->chunkIndexInWorld = chunkIndexInWorld;
+				newChunk->chunkLocationInWorld = chunkLocationInWorld;
+				newChunk->hasCollision = hasCollision;
 				newChunk->FinishSpawning(spawnTransform);
 
 				chunks.Add(chunkIndexInWorld, newChunk);
 			}
 		}
 	}
+}
+
+void UTerrainGenerationComponent::DestoryBlock(AChunk *chunkBeHit,FVector ImpactPoint)
+{
+	UE_LOG(LogTemp, Warning, TEXT("====%s===="), *ImpactPoint.ToString());
+	chunkBeHit->SetBlock(ImpactPoint, EBlockType::Air);
 }

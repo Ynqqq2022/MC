@@ -92,6 +92,15 @@ void AChunk::OnConstruction(const FTransform& Transform)
 	//UE_LOG(LogTemp,Warning,TEXT("=====================================================================%s"),*Transform.GetLocation().ToString());
 }
 
+void AChunk::UpdateCollision(bool Collision)
+{
+	if (hasCollision != Collision)
+	{
+		hasCollision = Collision;
+		UpdateMesh();
+	}
+}
+
 TArray<int32> AChunk::calculateNoise()
 {
 	TArray<int32> noises;
@@ -120,6 +129,7 @@ void AChunk::GenerateChunk()
 	//根据当前chunk所在位置计算得到simplex噪声值。noise大小为(chunkYBlocks + 2) * (chunkXBlocks + 2)，(x,y)对应索引为y + x * (chunkYBlocks+2)
 	TArray <int32> noise = calculateNoise();
 	//生成方块时，多生成边界一圈，相当于把chunk邻近chunk的边界也存起来了，方便后面剔除面判断。
+	//（后面chunk之间可能还要交流信息，不然本chunk的边界方块发生了改变，邻近的chunk却还存着以前的信息。
 	for(int32 x = 0; x < chunkXBlocks + 2; x++)
 	{
 		for(int32 y = 0; y < chunkYBlocks + 2; y++)
@@ -130,7 +140,7 @@ void AChunk::GenerateChunk()
 				
 				if (z == 30 + noise[y + x * (chunkYBlocks+2)]) blocks[index] = EBlockType::Grass;
 				else if (z == 29 + noise[y + x * (chunkYBlocks + 2)]) blocks[index] = EBlockType::Grass;
-				else if (z < 29 + noise[y + x * (chunkYBlocks + 2)]) blocks[index] = EBlockType::Air;
+				else if (z < 29 + noise[y + x * (chunkYBlocks + 2)]) blocks[index] = EBlockType::Grass;
 				else blocks[index] = EBlockType::Air;
 			}
 		}
@@ -155,8 +165,6 @@ void AChunk::UpdateMesh()
 				if(curBlockType != EBlockType::Grass)
 					continue;
 				
-
-
 				TArray<FVector> &Vertices = meshData[curBlockTypeInt].Vertices;
 				TArray<int32> &Triangles = meshData[curBlockTypeInt].Triangles;
 				TArray<FVector> &Normals = meshData[curBlockTypeInt].Normals;
@@ -218,7 +226,25 @@ void AChunk::UpdateMesh()
 	for(int i=0;i<meshData.Num();i++)
 	{
 		if(meshData[i].Vertices.Num()>0)
-			proceduralMeshComponent->CreateMeshSection(i, meshData[i].Vertices, meshData[i].Triangles, meshData[i].Normals, meshData[i].UV0, meshData[i].VertexColors,meshData[i].Tangents,false);
+			proceduralMeshComponent->CreateMeshSection(i, meshData[i].Vertices, meshData[i].Triangles, meshData[i].Normals, meshData[i].UV0, meshData[i].VertexColors, meshData[i].Tangents, hasCollision);
 	}
+}
+
+
+void AChunk::SetBlock(FVector position, EBlockType type)
+{
+	FVector localPosition = position - chunkLocationInWorld;
+	UE_LOG(LogTemp, Warning, TEXT("position: %s chunkLocationInWorld: %s"), *position.ToString(), *chunkLocationInWorld.ToString());
+
+	int32 x = localPosition.X / blockSize;
+	int32 y = localPosition.Y / blockSize;
+	int32 z = localPosition.Z / blockSize;
+	UE_LOG(LogTemp, Warning, TEXT("x: %d y: %d z: %d"), x, y, z);
+
+	x = x + 1;
+	y = y + 1;
+	int32 index = getIndexInBlocksArray(x, y, z);
+	blocks[index] = type;
+	UpdateMesh();
 }
 
