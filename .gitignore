@@ -38,3 +38,6 @@
 /Intermediate
 /Saved
 *.zip
+/Content/FirstPerson
+/Content/FirstPersonBP
+/Content/Geometry/Meshes
