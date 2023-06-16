@@ -37,8 +37,8 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	void UpdateCollision(bool Collision);
-	//传入世界坐标，更改该坐标处方块的类型。应保证坐标在此chunk内。
-	void SetBlock(FVector position, EBlockType type);
+	//传入世界坐标，更改该坐标处方块的类型。应保证坐标在此chunk内。impactNormal辅助判断是哪个方块。
+	void SetBlock(FVector position, FVector impactNormal, EBlockType type);
 
 
 	UPROPERTY(VisibleAnywhere)

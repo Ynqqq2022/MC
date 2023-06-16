@@ -92,8 +92,7 @@ void UTerrainGenerationComponent::AddChunks()
 	}
 }
 
-void UTerrainGenerationComponent::DestoryBlock(AChunk *chunkBeHit,FVector ImpactPoint)
+void UTerrainGenerationComponent::DestoryBlock(AChunk *chunkBeHit, FVector impactPoint, FVector impactNormal)
 {
-	UE_LOG(LogTemp, Warning, TEXT("====%s===="), *ImpactPoint.ToString());
-	chunkBeHit->SetBlock(ImpactPoint, EBlockType::Air);
+	chunkBeHit->SetBlock(impactPoint, impactNormal, EBlockType::Air);
 }

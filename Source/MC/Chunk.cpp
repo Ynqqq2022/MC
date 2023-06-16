@@ -231,18 +231,19 @@ void AChunk::UpdateMesh()
 }
 
 
-void AChunk::SetBlock(FVector position, EBlockType type)
+void AChunk::SetBlock(FVector position, FVector impactNormal, EBlockType type)
 {
-	FVector localPosition = position - chunkLocationInWorld;
-	UE_LOG(LogTemp, Warning, TEXT("position: %s chunkLocationInWorld: %s"), *position.ToString(), *chunkLocationInWorld.ToString());
+	/*减去作用点的法向量，使localPosition位于block的内部，这样整除操作就会得到正确的x, y, z，
+	 否则position在两个block的相邻面，无法区分该操作哪个block*/
+	FVector localPosition = position - chunkLocationInWorld - impactNormal;
 
 	int32 x = localPosition.X / blockSize;
 	int32 y = localPosition.Y / blockSize;
 	int32 z = localPosition.Z / blockSize;
-	UE_LOG(LogTemp, Warning, TEXT("x: %d y: %d z: %d"), x, y, z);
-
+	
 	x = x + 1;
 	y = y + 1;
+
 	int32 index = getIndexInBlocksArray(x, y, z);
 	blocks[index] = type;
 	UpdateMesh();

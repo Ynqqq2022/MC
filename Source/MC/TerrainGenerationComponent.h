@@ -32,7 +32,7 @@ public:
 
 	//点击鼠标左键时，检测是否击中方块，进行相应操作。
 	UFUNCTION(BlueprintCallable)
-	void DestoryBlock(AChunk* chunkBeHit, FVector ImpactPoint);
+	void DestoryBlock(AChunk* chunkBeHit, FVector impactPoint, FVector impactNormal);
 private:
 	//存储世界中所有的chunk
 	//TArray<AChunk*> Chunks;
