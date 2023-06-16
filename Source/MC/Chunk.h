@@ -51,11 +51,12 @@ public:
 	int32 chunkZBlocks = 256;
 
 	//此chunk在world中的XY坐标，以chunk为单位，是为整数索引，且可以为负。
+	UPROPERTY(VisibleAnywhere)
 	FIntPoint chunkIndexInWorld;
 	
 private:
-	//辅助函数，通过i,j,k获得blocks数组中的索引。
-	int getIndexInBlocksArray(int x, int y, int z){ return z + y * chunkZBlocks + x * chunkZBlocks * chunkYBlocks; }
+	//辅助函数，通过i,j,k获得blocks数组中的索引。遍历循环x、y、z，z为最内层。
+	inline int getIndexInBlocksArray(int x, int y, int z){ return z + y * (chunkZBlocks) + x * (chunkYBlocks + 2) * chunkZBlocks; }
 	
 	TArray<int32> calculateNoise();
 	
@@ -64,6 +65,7 @@ private:
 	//为每一方块生成渲染数据，提供给程序化网格体组件。
 	void UpdateMesh();
 
+	UPROPERTY(VisibleAnywhere)
 	//存储此chunk中每个方块的类型
 	TArray<EBlockType> blocks;
 		

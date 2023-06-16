@@ -95,13 +95,13 @@ void AChunk::OnConstruction(const FTransform& Transform)
 TArray<int32> AChunk::calculateNoise()
 {
 	TArray<int32> noises;
-	noises.Reserve(chunkZBlocks * chunkYBlocks);
+	noises.Reserve((chunkXBlocks + 2) * (chunkYBlocks + 2));	//多生成边缘一圈，得到邻近chunk的信息
 	int32 chunkIndexInWorldX = chunkIndexInWorld.X;
 	int32 chunkIndexInWorldY = chunkIndexInWorld.Y;
 	
-	for (int32 y = 0; y < chunkYBlocks; y++)
+	for (int32 x = -1; x < chunkXBlocks + 1; x++)
 	{
-		for (int32 x = 0; x < chunkXBlocks; x++)
+		for (int32 y = -1; y < chunkYBlocks + 1; y++)
 		{
 			float noiseValue = 
 			USimplexNoiseLibrary::SimplexNoise2D((chunkIndexInWorldX*chunkXBlocks + x) * 0.01f, (chunkIndexInWorldY*chunkYBlocks + y) * 0.01f) * 4 +
@@ -116,19 +116,21 @@ TArray<int32> AChunk::calculateNoise()
 
 void AChunk::GenerateChunk()
 {
-	blocks.SetNum(chunkZBlocks * chunkYBlocks * chunkXBlocks);
+	blocks.SetNum(chunkZBlocks * (chunkYBlocks + 2) * (chunkXBlocks + 2));
+	//根据当前chunk所在位置计算得到simplex噪声值。noise大小为(chunkYBlocks + 2) * (chunkXBlocks + 2)，(x,y)对应索引为y + x * (chunkYBlocks+2)
 	TArray <int32> noise = calculateNoise();
-	for(int32 x = 0;x < chunkXBlocks; x++)
+	//生成方块时，多生成边界一圈，相当于把chunk邻近chunk的边界也存起来了，方便后面剔除面判断。
+	for(int32 x = 0; x < chunkXBlocks + 2; x++)
 	{
-		for(int32 y = 0; y < chunkYBlocks; y++)
+		for(int32 y = 0; y < chunkYBlocks + 2; y++)
 		{
-			for(int32 z = 0;z < chunkZBlocks; z++)
+			for(int32 z = 0; z < chunkZBlocks; z++)
 			{
 				int32 index = getIndexInBlocksArray(x, y, z);
-				//UE_LOG(LogTemp,Warning,TEXT("%d"),noise[x + y * chunkYBlocks ]);	
-				if (z == 30 + noise[x + y * chunkYBlocks ]) blocks[index] = EBlockType::Grass;
-				else if (z == 29 + noise[x + y * chunkYBlocks]) blocks[index] = EBlockType::Air;
-				else if (z < 29 + noise[x + y * chunkYBlocks]) blocks[index] = EBlockType::Air;
+				
+				if (z == 30 + noise[y + x * (chunkYBlocks+2)]) blocks[index] = EBlockType::Grass;
+				else if (z == 29 + noise[y + x * (chunkYBlocks + 2)]) blocks[index] = EBlockType::Grass;
+				else if (z < 29 + noise[y + x * (chunkYBlocks + 2)]) blocks[index] = EBlockType::Air;
 				else blocks[index] = EBlockType::Air;
 			}
 		}
@@ -140,11 +142,12 @@ void AChunk::UpdateMesh()
 	TArray<FMeshData> meshData;
 	meshData.SetNum(4);
 	
-	for(int32 x = 0;x < chunkXBlocks; x++)
+	//渲染的方块要去掉外面一圈其他chunk的方块。
+	for(int32 x = 1; x < chunkXBlocks + 1; x++)
 	{
-		for(int32 y = 0; y < chunkYBlocks; y++)
+		for(int32 y = 1; y < chunkYBlocks + 1; y++)
 		{
-			for(int32 z = 0;z < chunkZBlocks; z++)
+			for(int32 z = 0; z < chunkZBlocks; z++)
 			{
 				int32 index = getIndexInBlocksArray(x, y, z);
 				EBlockType curBlockType = blocks[index];
@@ -152,6 +155,8 @@ void AChunk::UpdateMesh()
 				if(curBlockType != EBlockType::Grass)
 					continue;
 				
+
+
 				TArray<FVector> &Vertices = meshData[curBlockTypeInt].Vertices;
 				TArray<int32> &Triangles = meshData[curBlockTypeInt].Triangles;
 				TArray<FVector> &Normals = meshData[curBlockTypeInt].Normals;
@@ -161,11 +166,36 @@ void AChunk::UpdateMesh()
 				
 				int numOfVertices = Vertices.Num();
 				//x,y,z所在block的左下角顶点坐标(相对程序化网格体组件的坐标）
-				FVector baseLocation =  FVector(x * blockSize, y * blockSize, z * blockSize);
+				FVector baseLocation =  FVector((x-1) * blockSize, (y-1) * blockSize, z * blockSize);
 
-				//添加六个面的顶点数据
+				//添加六个面的渲染数据，前右后左上下。
 				for(int32 i=0;i<6;i++)
 				{
+					//当前面朝向的block的索引
+					int32 nearbyBlockIndex;
+					switch (i) {
+						case 0:
+							nearbyBlockIndex = getIndexInBlocksArray(x - 1, y, z);
+							break;
+						case 1:
+							nearbyBlockIndex = getIndexInBlocksArray(x, y + 1, z);
+							break;
+						case 2:
+							nearbyBlockIndex = getIndexInBlocksArray(x + 1, y, z);
+							break;
+						case 3:
+							nearbyBlockIndex = getIndexInBlocksArray(x, y - 1, z);
+							break;
+						case 4:
+							nearbyBlockIndex = getIndexInBlocksArray(x, y, z + 1);
+							break;
+						case 5:
+							nearbyBlockIndex = getIndexInBlocksArray(x, y, z - 1);
+							break;
+					}
+					if (blocks[nearbyBlockIndex] != EBlockType::Air)
+						continue;
+
 					//每个面有4个顶点
 					for(int32 j=0;j<4;j++)
 					{
