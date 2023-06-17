@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Chunk.generated.h"
 
+class UTerrainGenerationComponent;
 class UProceduralMeshComponent;
 
 /*TODO:使用数据表，将材质与类型关联，且能在蓝图上更改*/
@@ -37,10 +38,15 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	
 	void UpdateCollision(bool Collision);
-	//传入世界坐标，更改该坐标处方块的类型。应保证坐标在此chunk内。impactNormal辅助判断是哪个方块。
-	void SetBlock(FVector position, FVector impactNormal, EBlockType type);
 
-
+	//传入世界坐标，求该坐标在此chunk的索引，包含外围一圈。
+	FIntVector GetBlockIndexInChunk(const FVector worldPosition);
+	
+	/*传入世界坐标，更改该坐标处方块的类型。应保证坐标在block内,而不是在面上。
+	  block可以是外围一圈的block。返回是否更改成功，
+	*/
+	bool SetBlock(FVector position, EBlockType type);
+	
 	UPROPERTY(VisibleAnywhere)
 	UProceduralMeshComponent* proceduralMeshComponent;
 
@@ -87,4 +93,6 @@ private:
 	TArray<EBlockType> blocks;
 		
 	int32 kindsOfBlocks = 4;
+
+	TWeakObjectPtr<UTerrainGenerationComponent> terrainGenerationComponent;
 };

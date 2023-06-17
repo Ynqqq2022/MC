@@ -2,8 +2,6 @@
 
 
 #include "TerrainGenerationComponent.h"
-
-#include "Chunk.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
@@ -21,7 +19,7 @@ UTerrainGenerationComponent::UTerrainGenerationComponent()
 void UTerrainGenerationComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	UpdateActorPosition();
+	UpdatePlayerChunkIndex();
 	AddChunks();
 	// ...
 }
@@ -32,21 +30,21 @@ void UTerrainGenerationComponent::TickComponent(float DeltaTime, ELevelTick Tick
                                                 FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	if (UpdateActorPosition())
+	if (UpdatePlayerChunkIndex())
 	{
 		AddChunks();
 	}
 	// ...
 }
 
-bool UTerrainGenerationComponent::UpdateActorPosition()
+bool UTerrainGenerationComponent::UpdatePlayerChunkIndex()
 {
 	//通过玩家控制器获取玩家的位置
-	actorLocation = UGameplayStatics::GetPlayerPawn(GetOwner(), 0)->GetActorLocation();
+	FVector actorLocation = UGameplayStatics::GetPlayerPawn(GetOwner(), 0)->GetActorLocation();
 	//转化为以chunk为单位的位置
 	const FIntPoint newPlayerChunkPosition = FIntPoint(
-		actorLocation.X / (blockSize * chunkXBlocks),
-		actorLocation.Y / (blockSize * chunkYBlocks)
+		FMath::FloorToInt(actorLocation.X / (blockSize * chunkXBlocks)),
+		FMath::FloorToInt(actorLocation.Y / (blockSize * chunkYBlocks))
 	);
 
 	bool changed = (newPlayerChunkPosition.X!= playerChunkPosition.X || newPlayerChunkPosition.Y!= playerChunkPosition.Y );
@@ -92,7 +90,68 @@ void UTerrainGenerationComponent::AddChunks()
 	}
 }
 
-void UTerrainGenerationComponent::DestoryBlock(AChunk *chunkBeHit, FVector impactPoint, FVector impactNormal)
+
+AChunk* UTerrainGenerationComponent::GetChunkByLocation(FVector chunkLocation)
 {
-	chunkBeHit->SetBlock(impactPoint, impactNormal, EBlockType::Air);
+	FIntPoint index = FIntPoint(FMath::FloorToInt(chunkLocation.X / chunkXBlocks / blockSize), FMath::FloorToInt(chunkLocation.Y / chunkYBlocks / blockSize));
+	if (chunks.Contains(index))
+		return chunks[index];
+	else
+		return nullptr;
+}
+
+void UTerrainGenerationComponent::UpdateEdgeBlocks(FVector changedBlockLocation, EBlockType type)
+{
+	TArray<FIntPoint> toUpdateChunkIndexOffset;
+	AChunk* changedChunk = GetChunkByLocation(changedBlockLocation);
+	
+	FIntPoint changedChunkIndexInWorld = changedChunk->chunkIndexInWorld;
+	FIntVector changedBlockIndexInChunk = changedChunk->GetBlockIndexInChunk(changedBlockLocation);
+	
+	//更改的block是在chunk左边缘或右边缘
+	if(changedBlockIndexInChunk.X == 1)
+	{
+		toUpdateChunkIndexOffset.Add(FIntPoint(-1,0));
+	}
+	else if(changedBlockIndexInChunk.X == chunkXBlocks)
+	{
+		toUpdateChunkIndexOffset.Add(FIntPoint(1,0));
+	}
+
+	//更改的block是在chunk上边缘或下边缘
+	if(changedBlockIndexInChunk.Y == 1)
+	{
+		toUpdateChunkIndexOffset.Add(FIntPoint(0,-1));
+	}
+	else if(changedBlockIndexInChunk.Y == chunkYBlocks)
+	{
+		toUpdateChunkIndexOffset.Add(FIntPoint(0,1));
+	}
+
+	//顶角的chunk被影响到
+	if(toUpdateChunkIndexOffset.Num() == 2)
+	{
+		toUpdateChunkIndexOffset.Add(toUpdateChunkIndexOffset[0] + toUpdateChunkIndexOffset[1]);
+	}
+
+	for(int i=0;i<toUpdateChunkIndexOffset.Num();i++)
+	{
+		//被影响到的chunk的世界索引 = 当前chunk的世界索引 + 偏移量
+		FIntPoint toUpdateEdgeChunkIndex = changedChunkIndexInWorld + toUpdateChunkIndexOffset[i];
+		if(chunks.Contains(toUpdateEdgeChunkIndex))
+		{
+			chunks[toUpdateEdgeChunkIndex]->SetBlock(changedBlockLocation, EBlockType::Air);
+		}	
+	}
+}
+
+void UTerrainGenerationComponent::DestroyBlock(FVector impactPoint, FVector impactNormal)
+{
+	//通过面上的击中点减去击中点的法向量得到block内部的点。
+	const FVector pointInBlock = impactPoint - impactNormal * 0.5f * blockSize;
+	AChunk* chunkBeHit = GetChunkByLocation(pointInBlock);
+	chunkBeHit->SetBlock(pointInBlock, EBlockType::Air);
+	
+	//更新邻近方块
+	UpdateEdgeBlocks(pointInBlock,EBlockType::Air);
 }

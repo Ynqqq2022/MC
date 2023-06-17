@@ -3,6 +3,8 @@
 #include "Chunk.h"
 #include "ProceduralMeshComponent.h"
 #include "SimplexNoiseLibrary.h"
+#include "TerrainGenerationComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 struct FMeshData
 {
@@ -84,11 +86,12 @@ void AChunk::Tick(float DeltaTime)
 
 void AChunk::OnConstruction(const FTransform& Transform)
 {
-	// FString string ="chunk";
-	// FName name = FName(*string);
-	// proceduralMeshComponent = NewObject<UProceduralMeshComponent>(this,name);
-	// proceduralMeshComponent->RegisterComponent();
 	USimplexNoiseLibrary::setNoiseSeed(666);
+	APlayerController* playerController = UGameplayStatics::GetPlayerController(this,0);
+	if(playerController)
+	{
+		terrainGenerationComponent = playerController->FindComponentByClass<UTerrainGenerationComponent>();
+	}
 	//UE_LOG(LogTemp,Warning,TEXT("=====================================================================%s"),*Transform.GetLocation().ToString());
 }
 
@@ -105,8 +108,8 @@ TArray<int32> AChunk::calculateNoise()
 {
 	TArray<int32> noises;
 	noises.Reserve((chunkXBlocks + 2) * (chunkYBlocks + 2));	//多生成边缘一圈，得到邻近chunk的信息
-	int32 chunkIndexInWorldX = chunkIndexInWorld.X;
-	int32 chunkIndexInWorldY = chunkIndexInWorld.Y;
+	const int32 chunkIndexInWorldX = chunkIndexInWorld.X;
+	const int32 chunkIndexInWorldY = chunkIndexInWorld.Y;
 	
 	for (int32 x = -1; x < chunkXBlocks + 1; x++)
 	{
@@ -137,10 +140,10 @@ void AChunk::GenerateChunk()
 			for(int32 z = 0; z < chunkZBlocks; z++)
 			{
 				int32 index = getIndexInBlocksArray(x, y, z);
-				
-				if (z == 30 + noise[y + x * (chunkYBlocks+2)]) blocks[index] = EBlockType::Grass;
-				else if (z == 29 + noise[y + x * (chunkYBlocks + 2)]) blocks[index] = EBlockType::Grass;
-				else if (z < 29 + noise[y + x * (chunkYBlocks + 2)]) blocks[index] = EBlockType::Grass;
+				int indexInNoise = y + x * (chunkYBlocks+2);
+				if (z == 30 + noise[indexInNoise]) blocks[index] = EBlockType::Grass;
+				else if (z == 29 + noise[indexInNoise]) blocks[index] = EBlockType::Grass;
+				else if (z < 29 + noise[indexInNoise]) blocks[index] = EBlockType::Grass;
 				else blocks[index] = EBlockType::Air;
 			}
 		}
@@ -230,22 +233,27 @@ void AChunk::UpdateMesh()
 	}
 }
 
-
-void AChunk::SetBlock(FVector position, FVector impactNormal, EBlockType type)
+FIntVector AChunk::GetBlockIndexInChunk(const FVector worldPosition)
 {
-	/*减去作用点的法向量，使localPosition位于block的内部，这样整除操作就会得到正确的x, y, z，
-	 否则position在两个block的相邻面，无法区分该操作哪个block*/
-	FVector localPosition = position - chunkLocationInWorld - impactNormal;
-
-	int32 x = localPosition.X / blockSize;
-	int32 y = localPosition.Y / blockSize;
-	int32 z = localPosition.Z / blockSize;
-	
-	x = x + 1;
-	y = y + 1;
-
-	int32 index = getIndexInBlocksArray(x, y, z);
-	blocks[index] = type;
-	UpdateMesh();
+	//以block[0]坐标为原点，即算上周围一圈方块后，worldPosition在当前chunk中的相对坐标。
+	const FVector localPosition = worldPosition - chunkLocationInWorld + FVector(blockSize, blockSize, 0);
+	int32 x = FMath::FloorToInt(localPosition.X / blockSize);
+	int32 y = FMath::FloorToInt(localPosition.Y / blockSize);
+	int32 z = FMath::FloorToInt(localPosition.Z / blockSize);
+	return {x, y, z};
 }
 
+bool AChunk::SetBlock(FVector position, EBlockType type)
+{
+	FIntVector localIndex = GetBlockIndexInChunk(position);	
+	
+	int32 x = localIndex.X; 
+	int32 y = localIndex.Y;
+	int32 z = localIndex.Z;
+
+	int32 index = getIndexInBlocksArray(x, y, z);
+	if(index <0 || index > blocks.Num()) return false;
+	blocks[index] = type;
+	UpdateMesh();
+	return true;
+}
