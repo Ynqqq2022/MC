@@ -10,7 +10,8 @@ UTerrainGenerationComponent::UTerrainGenerationComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
+	
+	
 	// ...
 }
 
@@ -19,6 +20,21 @@ UTerrainGenerationComponent::UTerrainGenerationComponent()
 void UTerrainGenerationComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	//从数据表加载方块材质
+	if (BlockDataTable)
+	{
+		TArray<FName> BlockDataRowNames = BlockDataTable->GetRowNames();
+		for (FName RowName : BlockDataRowNames)
+		{
+			FBlockData* BlockData = BlockDataTable->FindRow<FBlockData>(RowName, FString());
+			if (BlockData)
+			{
+				Materials.Add(BlockData->Type, BlockData->AssetData.Material);
+			}
+		}
+	}
+
 	UpdatePlayerChunkIndex();
 	AddChunks();
 	// ...
@@ -66,25 +82,25 @@ void UTerrainGenerationComponent::AddChunks()
 			const FVector chunkLocationInWorld = FVector(chunkIndexInWorld.X * chunkXSize, chunkIndexInWorld.Y * chunkYSize, 0.0f);
 			//player所在chunk周围一圈的chunk创建碰撞。
 			bool hasCollision = ((playerChunkPosition - chunkIndexInWorld).Size() <= 1.415);
-			if(chunks.Contains(chunkIndexInWorld))
+			if(Chunks.Contains(chunkIndexInWorld))
 			{
 				//若chunk已存在，则根据hasCollision更新是否创建碰撞。
-				chunks[chunkIndexInWorld]->UpdateCollision(hasCollision);
+				Chunks[chunkIndexInWorld]->UpdateCollision(hasCollision);
 			}
 			else
 			{
 				FTransform spawnTransform = FTransform(chunkLocationInWorld);
 				AChunk* newChunk = GetWorld()->SpawnActorDeferred<AChunk>(chunkClass,spawnTransform);
-				newChunk->blockSize = blockSize;
-				newChunk->chunkXBlocks = chunkXBlocks;
-				newChunk->chunkYBlocks = chunkYBlocks;
-				newChunk->chunkZBlocks = chunkZBlocks;
-				newChunk->chunkIndexInWorld = chunkIndexInWorld;
-				newChunk->chunkLocationInWorld = chunkLocationInWorld;
-				newChunk->hasCollision = hasCollision;
+				newChunk->BlockSize = blockSize;
+				newChunk->ChunkXBlocks = chunkXBlocks;
+				newChunk->ChunkYBlocks = chunkYBlocks;
+				newChunk->ChunkZBlocks = chunkZBlocks;
+				newChunk->ChunkIndexInWorld = chunkIndexInWorld;
+				newChunk->ChunkLocationInWorld = chunkLocationInWorld;
+				newChunk->bHasCollision = hasCollision;
 				newChunk->FinishSpawning(spawnTransform);
 
-				chunks.Add(chunkIndexInWorld, newChunk);
+				Chunks.Add(chunkIndexInWorld, newChunk);
 			}
 		}
 	}
@@ -94,8 +110,8 @@ void UTerrainGenerationComponent::AddChunks()
 AChunk* UTerrainGenerationComponent::GetChunkByLocation(FVector chunkLocation)
 {
 	FIntPoint index = FIntPoint(FMath::FloorToInt(chunkLocation.X / chunkXBlocks / blockSize), FMath::FloorToInt(chunkLocation.Y / chunkYBlocks / blockSize));
-	if (chunks.Contains(index))
-		return chunks[index];
+	if (Chunks.Contains(index))
+		return Chunks[index];
 	else
 		return nullptr;
 }
@@ -105,7 +121,7 @@ void UTerrainGenerationComponent::UpdateEdgeBlocks(FVector changedBlockLocation,
 	TArray<FIntPoint> toUpdateChunkIndexOffset;
 	AChunk* changedChunk = GetChunkByLocation(changedBlockLocation);
 	
-	FIntPoint changedChunkIndexInWorld = changedChunk->chunkIndexInWorld;
+	FIntPoint changedChunkIndexInWorld = changedChunk->ChunkIndexInWorld;
 	FIntVector changedBlockIndexInChunk = changedChunk->GetBlockIndexInChunk(changedBlockLocation);
 	
 	//更改的block是在chunk左边缘或右边缘
@@ -138,9 +154,9 @@ void UTerrainGenerationComponent::UpdateEdgeBlocks(FVector changedBlockLocation,
 	{
 		//被影响到的chunk的世界索引 = 当前chunk的世界索引 + 偏移量
 		FIntPoint toUpdateEdgeChunkIndex = changedChunkIndexInWorld + toUpdateChunkIndexOffset[i];
-		if(chunks.Contains(toUpdateEdgeChunkIndex))
+		if(Chunks.Contains(toUpdateEdgeChunkIndex))
 		{
-			chunks[toUpdateEdgeChunkIndex]->SetBlock(changedBlockLocation, EBlockType::Air);
+			Chunks[toUpdateEdgeChunkIndex]->SetBlock(changedBlockLocation, EBlockType::Air);
 		}	
 	}
 }

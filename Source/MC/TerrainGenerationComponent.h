@@ -40,7 +40,8 @@ public:
 	//摧毁命中点所在的方块
 	UFUNCTION(BlueprintCallable)
 	void DestroyBlock(FVector impactPoint, FVector impactNormal);
-
+	int32 GetMaterialCount(){ return Materials.Num();}
+	UMaterialInterface* GetMaterialByType(EBlockType Type){ return Materials.Contains(Type) ? Materials[Type] : nullptr;}
 private:
 	//通过世界坐标获取chunk
 	AChunk* GetChunkByLocation(FVector chunkLocation);
@@ -49,10 +50,19 @@ private:
 	  参数为被更改的方块的位置、改为了什么类型。*/
 	void UpdateEdgeBlocks(FVector changedBlockLocation, EBlockType type);
 
+	UPROPERTY(VisibleAnywhere)
 	//存储世界中所有的chunk
 	//TArray<AChunk*> Chunks;
-	TMap<FIntPoint,AChunk*> chunks;
+	TMap<FIntPoint,AChunk*> Chunks;
 
+	//block数据表
+	UPROPERTY(EditAnywhere)
+	UDataTable* BlockDataTable;
+
+	//存储从数据表中加载的方块材质
+	UPROPERTY(EditAnywhere)
+	TMap<EBlockType,UMaterialInterface*> Materials;
+	
 	//玩家当前所在的区块，以区块为单位
 	UPROPERTY(VisibleInstanceOnly)
 	FIntPoint playerChunkPosition;

@@ -61,11 +61,11 @@ AChunk::AChunk()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	FString string ="chunk";
-	FName name = FName(*string);
-	proceduralMeshComponent = NewObject<UProceduralMeshComponent>(this,name);
+	FString String ="chunk";
+	FName Name = FName(*String);
+	ProceduralMeshComponent = NewObject<UProceduralMeshComponent>(this,Name);
 	
-	RootComponent = proceduralMeshComponent;
+	RootComponent = ProceduralMeshComponent;
 	
 }
 
@@ -87,64 +87,64 @@ void AChunk::Tick(float DeltaTime)
 void AChunk::OnConstruction(const FTransform& Transform)
 {
 	USimplexNoiseLibrary::setNoiseSeed(666);
-	APlayerController* playerController = UGameplayStatics::GetPlayerController(this,0);
-	if(playerController)
+	APlayerController* PlayerController = UGameplayStatics::GetPlayerController(this,0);
+	if(PlayerController)
 	{
-		terrainGenerationComponent = playerController->FindComponentByClass<UTerrainGenerationComponent>();
+		TerrainGenerationComponent = PlayerController->FindComponentByClass<UTerrainGenerationComponent>();
 	}
 	//UE_LOG(LogTemp,Warning,TEXT("=====================================================================%s"),*Transform.GetLocation().ToString());
 }
 
 void AChunk::UpdateCollision(bool Collision)
 {
-	if (hasCollision != Collision)
+	if (bHasCollision != Collision)
 	{
-		hasCollision = Collision;
+		bHasCollision = Collision;
 		UpdateMesh();
 	}
 }
 
-TArray<int32> AChunk::calculateNoise()
+TArray<int32> AChunk::CalculateNoise()
 {
-	TArray<int32> noises;
-	noises.Reserve((chunkXBlocks + 2) * (chunkYBlocks + 2));	//多生成边缘一圈，得到邻近chunk的信息
-	const int32 chunkIndexInWorldX = chunkIndexInWorld.X;
-	const int32 chunkIndexInWorldY = chunkIndexInWorld.Y;
+	TArray<int32> Noises;
+	Noises.Reserve((ChunkXBlocks + 2) * (ChunkYBlocks + 2));	//多生成边缘一圈，得到邻近chunk的信息
+	const int32 ChunkIndexInWorldX = ChunkIndexInWorld.X;
+	const int32 ChunkIndexInWorldY = ChunkIndexInWorld.Y;
 	
-	for (int32 x = -1; x < chunkXBlocks + 1; x++)
+	for (int32 x = -1; x < ChunkXBlocks + 1; x++)
 	{
-		for (int32 y = -1; y < chunkYBlocks + 1; y++)
+		for (int32 y = -1; y < ChunkYBlocks + 1; y++)
 		{
-			float noiseValue = 
-			USimplexNoiseLibrary::SimplexNoise2D((chunkIndexInWorldX*chunkXBlocks + x) * 0.01f, (chunkIndexInWorldY*chunkYBlocks + y) * 0.01f) * 4 +
-			USimplexNoiseLibrary::SimplexNoise2D((chunkIndexInWorldX*chunkXBlocks + x) * 0.01f, (chunkIndexInWorldY*chunkYBlocks + y) * 0.01f) * 8 +
-			USimplexNoiseLibrary::SimplexNoise2D((chunkIndexInWorldX*chunkXBlocks + x) * 0.004f, (chunkIndexInWorldY*chunkYBlocks + y) * 0.004f) * 16 +
-			FMath::Clamp(USimplexNoiseLibrary::SimplexNoise2D((chunkIndexInWorldX*chunkXBlocks + x) * 0.05f, (chunkIndexInWorldY*chunkYBlocks + y) * 0.05f), 0.0f, 5.0f) * 4; // clamp 0-5
-			noises.Add(FMath::FloorToInt(noiseValue));
+			float NoiseValue = 
+			USimplexNoiseLibrary::SimplexNoise2D((ChunkIndexInWorldX*ChunkXBlocks + x) * 0.01f, (ChunkIndexInWorldY*ChunkYBlocks + y) * 0.01f) * 4 +
+			USimplexNoiseLibrary::SimplexNoise2D((ChunkIndexInWorldX*ChunkXBlocks + x) * 0.01f, (ChunkIndexInWorldY*ChunkYBlocks + y) * 0.01f) * 8 +
+			USimplexNoiseLibrary::SimplexNoise2D((ChunkIndexInWorldX*ChunkXBlocks + x) * 0.004f, (ChunkIndexInWorldY*ChunkYBlocks + y) * 0.004f) * 16 +
+			FMath::Clamp(USimplexNoiseLibrary::SimplexNoise2D((ChunkIndexInWorldX*ChunkXBlocks + x) * 0.05f, (ChunkIndexInWorldY*ChunkYBlocks + y) * 0.05f), 0.0f, 5.0f) * 4; // clamp 0-5
+			Noises.Add(FMath::FloorToInt(NoiseValue));
 		}
 	}
-	return noises;
+	return Noises;
 }
 
 void AChunk::GenerateChunk()
 {
-	blocks.SetNum(chunkZBlocks * (chunkYBlocks + 2) * (chunkXBlocks + 2));
+	Blocks.SetNum(ChunkZBlocks * (ChunkYBlocks + 2) * (ChunkXBlocks + 2));
 	//根据当前chunk所在位置计算得到simplex噪声值。noise大小为(chunkYBlocks + 2) * (chunkXBlocks + 2)，(x,y)对应索引为y + x * (chunkYBlocks+2)
-	TArray <int32> noise = calculateNoise();
+	TArray <int32> noise = CalculateNoise();
 	//生成方块时，多生成边界一圈，相当于把chunk邻近chunk的边界也存起来了，方便后面剔除面判断。
 	//（后面chunk之间可能还要交流信息，不然本chunk的边界方块发生了改变，邻近的chunk却还存着以前的信息。
-	for(int32 x = 0; x < chunkXBlocks + 2; x++)
+	for(int32 x = 0; x < ChunkXBlocks + 2; x++)
 	{
-		for(int32 y = 0; y < chunkYBlocks + 2; y++)
+		for(int32 y = 0; y < ChunkYBlocks + 2; y++)
 		{
-			for(int32 z = 0; z < chunkZBlocks; z++)
+			for(int32 z = 0; z < ChunkZBlocks; z++)
 			{
-				int32 index = getIndexInBlocksArray(x, y, z);
-				int indexInNoise = y + x * (chunkYBlocks+2);
-				if (z == 30 + noise[indexInNoise]) blocks[index] = EBlockType::Grass;
-				else if (z == 29 + noise[indexInNoise]) blocks[index] = EBlockType::Grass;
-				else if (z < 29 + noise[indexInNoise]) blocks[index] = EBlockType::Grass;
-				else blocks[index] = EBlockType::Air;
+				int32 Index = GetIndexInBlocksArray(x, y, z);
+				int IndexInNoise = y + x * (ChunkYBlocks+2);
+				if (z == 30 + noise[IndexInNoise]) Blocks[Index] = EBlockType::Grass;
+				else if (z == 29 + noise[IndexInNoise]) Blocks[Index] = EBlockType::Grass;
+				else if (z < 29 + noise[IndexInNoise]) Blocks[Index] = EBlockType::Grass;
+				else Blocks[Index] = EBlockType::Air;
 			}
 		}
 	}
@@ -152,65 +152,67 @@ void AChunk::GenerateChunk()
 
 void AChunk::UpdateMesh()
 {
-	TArray<FMeshData> meshData;
-	meshData.SetNum(4);
+	TMap<EBlockType,FMeshData> MeshDataMap;
+	//MeshData.SetNum(TerrainGenerationComponent->GetMaterialCount());
 	
 	//渲染的方块要去掉外面一圈其他chunk的方块。
-	for(int32 x = 1; x < chunkXBlocks + 1; x++)
+	for(int32 x = 1; x < ChunkXBlocks + 1; x++)
 	{
-		for(int32 y = 1; y < chunkYBlocks + 1; y++)
+		for(int32 y = 1; y < ChunkYBlocks + 1; y++)
 		{
-			for(int32 z = 0; z < chunkZBlocks; z++)
+			for(int32 z = 0; z < ChunkZBlocks; z++)
 			{
-				int32 index = getIndexInBlocksArray(x, y, z);
-				EBlockType curBlockType = blocks[index];
-				int32 curBlockTypeInt = static_cast<int32>(curBlockType);
-				if(curBlockType != EBlockType::Grass)
+				int32 Index = GetIndexInBlocksArray(x, y, z);
+				EBlockType CurBlockType = Blocks[Index];
+				//int32 CurBlockTypeInt = static_cast<int32>(CurBlockType);
+				if(CurBlockType != EBlockType::Grass)
 					continue;
-				
-				TArray<FVector> &Vertices = meshData[curBlockTypeInt].Vertices;
-				TArray<int32> &Triangles = meshData[curBlockTypeInt].Triangles;
-				TArray<FVector> &Normals = meshData[curBlockTypeInt].Normals;
-				TArray<FVector2D> &UV0 = meshData[curBlockTypeInt].UV0;
-				TArray<FColor> &VertexColors = meshData[curBlockTypeInt].VertexColors;
-				TArray<FProcMeshTangent> &Tangents = meshData[curBlockTypeInt].Tangents;
+				FMeshData& CurMeshData = MeshDataMap.FindOrAdd(CurBlockType);
+
+
+				TArray<FVector> &Vertices = CurMeshData.Vertices;
+				TArray<int32> &Triangles = CurMeshData.Triangles;
+				TArray<FVector> &Normals = CurMeshData.Normals;
+				TArray<FVector2D> &UV0 = CurMeshData.UV0;
+				TArray<FColor> &VertexColors = CurMeshData.VertexColors;
+				TArray<FProcMeshTangent> &Tangents = CurMeshData.Tangents;
 				
 				int numOfVertices = Vertices.Num();
 				//x,y,z所在block的左下角顶点坐标(相对程序化网格体组件的坐标）
-				FVector baseLocation =  FVector((x-1) * blockSize, (y-1) * blockSize, z * blockSize);
+				FVector baseLocation =  FVector((x-1) * BlockSize, (y-1) * BlockSize, z * BlockSize);
 
 				//添加六个面的渲染数据，前右后左上下。
 				for(int32 i=0;i<6;i++)
 				{
 					//当前面朝向的block的索引
-					int32 nearbyBlockIndex;
+					int32 NearbyBlockIndex;
 					switch (i) {
 						case 0:
-							nearbyBlockIndex = getIndexInBlocksArray(x - 1, y, z);
+							NearbyBlockIndex = GetIndexInBlocksArray(x - 1, y, z);
 							break;
 						case 1:
-							nearbyBlockIndex = getIndexInBlocksArray(x, y + 1, z);
+							NearbyBlockIndex = GetIndexInBlocksArray(x, y + 1, z);
 							break;
 						case 2:
-							nearbyBlockIndex = getIndexInBlocksArray(x + 1, y, z);
+							NearbyBlockIndex = GetIndexInBlocksArray(x + 1, y, z);
 							break;
 						case 3:
-							nearbyBlockIndex = getIndexInBlocksArray(x, y - 1, z);
+							NearbyBlockIndex = GetIndexInBlocksArray(x, y - 1, z);
 							break;
 						case 4:
-							nearbyBlockIndex = getIndexInBlocksArray(x, y, z + 1);
+							NearbyBlockIndex = GetIndexInBlocksArray(x, y, z + 1);
 							break;
 						case 5:
-							nearbyBlockIndex = getIndexInBlocksArray(x, y, z - 1);
+							NearbyBlockIndex = GetIndexInBlocksArray(x, y, z - 1);
 							break;
 					}
-					if (blocks[nearbyBlockIndex] != EBlockType::Air)
+					if (Blocks[NearbyBlockIndex] != EBlockType::Air)
 						continue;
 
 					//每个面有4个顶点
 					for(int32 j=0;j<4;j++)
 					{
-						Vertices.Add(baseLocation + EightVerticesInABlock[triangleIndex[i][j]] * blockSize);
+						Vertices.Add(baseLocation + EightVerticesInABlock[triangleIndex[i][j]] * BlockSize);
 						Normals.Add(normals[i]);
 						UV0.Add(UV0s[j]);
 					}
@@ -224,36 +226,51 @@ void AChunk::UpdateMesh()
 	}
 
 	//需要吗？
-	proceduralMeshComponent->ClearAllMeshSections();
+	ProceduralMeshComponent->ClearAllMeshSections();
 
-	for(int i=0;i<meshData.Num();i++)
+	// for(int i=0;i<MeshDataMap.Num();i++)
+	// {
+	// 	if(MeshDataMap[i].Vertices.Num()>0)
+	// 		ProceduralMeshComponent->CreateMeshSection(i, MeshDataMap[i].Vertices, MeshDataMap[i].Triangles, MeshDataMap[i].Normals, MeshDataMap[i].UV0, MeshDataMap[i].VertexColors, MeshDataMap[i].Tangents, bHasCollision);
+	// }
+
+	for(auto i  :MeshDataMap)
 	{
-		if(meshData[i].Vertices.Num()>0)
-			proceduralMeshComponent->CreateMeshSection(i, meshData[i].Vertices, meshData[i].Triangles, meshData[i].Normals, meshData[i].UV0, meshData[i].VertexColors, meshData[i].Tangents, hasCollision);
+		EBlockType CurBlockType = i.Key;
+		FMeshData& CurMeshData = i.Value;
+
+		if(CurMeshData.Vertices.Num()>0)
+		{
+			int32 CurBlockTypeInt = static_cast<int32>(CurBlockType);
+			ProceduralMeshComponent->CreateMeshSection(CurBlockTypeInt, CurMeshData.Vertices, CurMeshData.Triangles, CurMeshData.Normals, CurMeshData.UV0, CurMeshData.VertexColors, CurMeshData.Tangents, bHasCollision);
+			UMaterialInterface* CurBlockMaterial = TerrainGenerationComponent->GetMaterialByType(CurBlockType);
+			if(CurBlockMaterial)
+				ProceduralMeshComponent->SetMaterial(CurBlockTypeInt, CurBlockMaterial);
+		}
 	}
 }
 
-FIntVector AChunk::GetBlockIndexInChunk(const FVector worldPosition)
+FIntVector AChunk::GetBlockIndexInChunk(const FVector WorldPosition)
 {
 	//以block[0]坐标为原点，即算上周围一圈方块后，worldPosition在当前chunk中的相对坐标。
-	const FVector localPosition = worldPosition - chunkLocationInWorld + FVector(blockSize, blockSize, 0);
-	int32 x = FMath::FloorToInt(localPosition.X / blockSize);
-	int32 y = FMath::FloorToInt(localPosition.Y / blockSize);
-	int32 z = FMath::FloorToInt(localPosition.Z / blockSize);
+	const FVector LocalPosition = WorldPosition - ChunkLocationInWorld + FVector(BlockSize, BlockSize, 0);
+	int32 x = FMath::FloorToInt(LocalPosition.X / BlockSize);
+	int32 y = FMath::FloorToInt(LocalPosition.Y / BlockSize);
+	int32 z = FMath::FloorToInt(LocalPosition.Z / BlockSize);
 	return {x, y, z};
 }
 
-bool AChunk::SetBlock(FVector position, EBlockType type)
+bool AChunk::SetBlock(FVector Position, EBlockType Type)
 {
-	FIntVector localIndex = GetBlockIndexInChunk(position);	
+	FIntVector LocalIndex = GetBlockIndexInChunk(Position);	
 	
-	int32 x = localIndex.X; 
-	int32 y = localIndex.Y;
-	int32 z = localIndex.Z;
+	int32 x = LocalIndex.X; 
+	int32 y = LocalIndex.Y;
+	int32 z = LocalIndex.Z;
 
-	int32 index = getIndexInBlocksArray(x, y, z);
-	if(index <0 || index > blocks.Num()) return false;
-	blocks[index] = type;
+	int32 Index = GetIndexInBlocksArray(x, y, z);
+	if(Index <0 || Index > Blocks.Num()) return false;
+	Blocks[Index] = Type;
 	UpdateMesh();
 	return true;
 }

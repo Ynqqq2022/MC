@@ -4,20 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "BlockDataStructs.h"
 #include "Chunk.generated.h"
 
 class UTerrainGenerationComponent;
 class UProceduralMeshComponent;
 
 /*TODO:使用数据表，将材质与类型关联，且能在蓝图上更改*/
-UENUM(BlueprintType)
-enum class EBlockType:uint8
-{
-	Air UMETA(DisplayName = "Air"),
-	Grass UMETA(DisplayName = "Grass"),
-	Soil UMETA(DisplayName = "Soil"),
-	Stone UMETA(DisplayName = "Stone"),
-};
 
 UCLASS()
 class MC_API AChunk : public AActor
@@ -40,45 +33,45 @@ public:
 	void UpdateCollision(bool Collision);
 
 	//传入世界坐标，求该坐标在此chunk的索引，包含外围一圈。
-	FIntVector GetBlockIndexInChunk(const FVector worldPosition);
+	FIntVector GetBlockIndexInChunk(const FVector WorldPosition);
 	
 	/*传入世界坐标，更改该坐标处方块的类型。应保证坐标在block内,而不是在面上。
 	  block可以是外围一圈的block。返回是否更改成功，
 	*/
-	bool SetBlock(FVector position, EBlockType type);
+	bool SetBlock(FVector Position, EBlockType Type);
 	
 	UPROPERTY(VisibleAnywhere)
-	UProceduralMeshComponent* proceduralMeshComponent;
+	UProceduralMeshComponent* ProceduralMeshComponent;
 
 	//方块大小
 	UPROPERTY(EditAnywhere)
-	int32 blockSize = 100;
+	int32 BlockSize = 100;
 
 	//chunk尺寸，表示长宽高有几个block
 	UPROPERTY(EditAnywhere)
-	int32 chunkXBlocks = 16;
+	int32 ChunkXBlocks = 16;
 	UPROPERTY(EditAnywhere)
-	int32 chunkYBlocks = 16;
+	int32 ChunkYBlocks = 16;
 	UPROPERTY(EditAnywhere)
-	int32 chunkZBlocks = 256;
+	int32 ChunkZBlocks = 256;
 
 	//此chunk在world中的XY坐标，以chunk为单位，是为整数索引，且可以为负。
 	UPROPERTY(VisibleAnywhere)
-	FIntPoint chunkIndexInWorld;
+	FIntPoint ChunkIndexInWorld;
 
 	//此chunk在world中的世界坐标
 	UPROPERTY(VisibleAnywhere)
-	FVector chunkLocationInWorld;
+	FVector ChunkLocationInWorld;
 
 	//当前chunk中的blocks是否有碰撞，只在player所在的chunk和邻近的chunk生成碰撞，可以优化性能。
 	UPROPERTY(VisibleAnywhere)
-	bool hasCollision = false;
+	bool bHasCollision = false;
 	
 private:
 	//辅助函数，通过x,y,z获得blocks数组中的索引。遍历循环x、y、z，z为最内层。
-	inline int getIndexInBlocksArray(int x, int y, int z){ return z + y * (chunkZBlocks) + x * (chunkYBlocks + 2) * chunkZBlocks; }
+	inline int GetIndexInBlocksArray(int x, int y, int z){ return z + y * (ChunkZBlocks) + x * (ChunkYBlocks + 2) * ChunkZBlocks; }
 	
-	TArray<int32> calculateNoise();
+	TArray<int32> CalculateNoise();
 	
 	//生成Chunk，为每一方块确定类型。
 	void GenerateChunk();
@@ -90,9 +83,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	//存储此chunk中每个方块的类型
-	TArray<EBlockType> blocks;
-		
-	int32 kindsOfBlocks = 4;
+	TArray<EBlockType> Blocks;
 
-	TWeakObjectPtr<UTerrainGenerationComponent> terrainGenerationComponent;
+	TWeakObjectPtr<UTerrainGenerationComponent> TerrainGenerationComponent;
 };
