@@ -142,8 +142,8 @@ void AChunk::GenerateChunk()
 				int32 Index = GetIndexInBlocksArray(x, y, z);
 				int IndexInNoise = y + x * (ChunkYBlocks+2);
 				if (z == 30 + noise[IndexInNoise]) Blocks[Index] = EBlockType::Grass;
-				else if (z == 29 + noise[IndexInNoise]) Blocks[Index] = EBlockType::Grass;
-				else if (z < 29 + noise[IndexInNoise]) Blocks[Index] = EBlockType::Grass;
+				else if (z > 25 + noise[IndexInNoise] && z < 30 + noise[IndexInNoise]) Blocks[Index] = EBlockType::Soil;
+				else if (z <= 25 + noise[IndexInNoise]) Blocks[Index] = EBlockType::Stone;
 				else Blocks[Index] = EBlockType::Air;
 			}
 		}
@@ -165,7 +165,7 @@ void AChunk::UpdateMesh()
 				int32 Index = GetIndexInBlocksArray(x, y, z);
 				EBlockType CurBlockType = Blocks[Index];
 				//int32 CurBlockTypeInt = static_cast<int32>(CurBlockType);
-				if(CurBlockType != EBlockType::Grass)
+				if(CurBlockType == EBlockType::Air)
 					continue;
 				FMeshData& CurMeshData = MeshDataMap.FindOrAdd(CurBlockType);
 
