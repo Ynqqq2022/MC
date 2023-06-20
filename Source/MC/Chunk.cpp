@@ -233,20 +233,22 @@ void AChunk::UpdateMesh()
 	// 	if(MeshDataMap[i].Vertices.Num()>0)
 	// 		ProceduralMeshComponent->CreateMeshSection(i, MeshDataMap[i].Vertices, MeshDataMap[i].Triangles, MeshDataMap[i].Normals, MeshDataMap[i].UV0, MeshDataMap[i].VertexColors, MeshDataMap[i].Tangents, bHasCollision);
 	// }
-
-	for(auto i  :MeshDataMap)
+	if(TerrainGenerationComponent != nullptr)
 	{
-		EBlockType CurBlockType = i.Key;
-		FMeshData& CurMeshData = i.Value;
-
-		if(CurMeshData.Vertices.Num()>0)
+		for(auto i : MeshDataMap)
 		{
-			int32 CurBlockTypeInt = static_cast<int32>(CurBlockType);
-			ProceduralMeshComponent->CreateMeshSection(CurBlockTypeInt, CurMeshData.Vertices, CurMeshData.Triangles, CurMeshData.Normals, CurMeshData.UV0, CurMeshData.VertexColors, CurMeshData.Tangents, bHasCollision);
-			UMaterialInterface* CurBlockMaterial = TerrainGenerationComponent->GetMaterialByType(CurBlockType);
-			if(CurBlockMaterial)
-				ProceduralMeshComponent->SetMaterial(CurBlockTypeInt, CurBlockMaterial);
-		}
+			EBlockType CurBlockType = i.Key;
+			FMeshData& CurMeshData = i.Value;
+
+			if(CurMeshData.Vertices.Num()>0)
+			{
+				int32 CurBlockTypeInt = static_cast<int32>(CurBlockType);
+				ProceduralMeshComponent->CreateMeshSection(CurBlockTypeInt, CurMeshData.Vertices, CurMeshData.Triangles, CurMeshData.Normals, CurMeshData.UV0, CurMeshData.VertexColors, CurMeshData.Tangents, bHasCollision);
+				UMaterialInterface* CurBlockMaterial = TerrainGenerationComponent->GetMaterialByType(CurBlockType);
+				if(CurBlockMaterial)
+					ProceduralMeshComponent->SetMaterial(CurBlockTypeInt, CurBlockMaterial);
+			}
+		}	
 	}
 }
 
@@ -258,6 +260,19 @@ FIntVector AChunk::GetBlockIndexInChunk(const FVector WorldPosition)
 	int32 y = FMath::FloorToInt(LocalPosition.Y / BlockSize);
 	int32 z = FMath::FloorToInt(LocalPosition.Z / BlockSize);
 	return {x, y, z};
+}
+
+FVector AChunk::GetBlockCenterPosition(const FVector WorldPosition)
+{
+	FIntVector Index = GetBlockIndexInChunk(WorldPosition);
+	FVector CenterPosition;
+	
+	CenterPosition[0] = (Index[0] - 0.5f) * BlockSize;
+	CenterPosition[1] = (Index[1] - 0.5f) * BlockSize;
+	CenterPosition[2] = (Index[2] + 0.5f) * BlockSize;
+	CenterPosition += ChunkLocationInWorld;
+	
+	return CenterPosition;
 }
 
 bool AChunk::SetBlock(FVector Position, EBlockType Type)

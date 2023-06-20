@@ -51,6 +51,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void DestroyBlock(FVector ImpactPoint, FVector ImpactNormal);
 
+	//放置方块
+	UFUNCTION(BlueprintCallable)
+	void PlaceBlock(FVector ImpactPoint, FVector ImpactNormal,EBlockType Type);
+
 	int32 GetMaterialCount(){ return Materials.Num();}
 
 	UMaterialInterface* GetMaterialByType(EBlockType Type){ return Materials.Contains(Type) ? Materials[Type] : nullptr;}

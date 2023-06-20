@@ -34,6 +34,9 @@ public:
 
 	//传入世界坐标，求该坐标在此chunk的索引，包含外围一圈。
 	FIntVector GetBlockIndexInChunk(const FVector WorldPosition);
+
+	//传入世界坐标，求该坐标所在Block的中心坐标。
+	FVector GetBlockCenterPosition(const FVector WorldPosition);
 	
 	/*传入世界坐标，更改该坐标处方块的类型。应保证坐标在block内,而不是在面上。
 	  block可以是外围一圈的block。返回是否更改成功，
@@ -44,15 +47,15 @@ public:
 	UProceduralMeshComponent* ProceduralMeshComponent;
 
 	//方块大小
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	int32 BlockSize = 100;
 
 	//chunk尺寸，表示长宽高有几个block
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	int32 ChunkXBlocks = 16;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	int32 ChunkYBlocks = 16;
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere)
 	int32 ChunkZBlocks = 256;
 
 	//此chunk在world中的XY坐标，以chunk为单位，是为整数索引，且可以为负。
@@ -81,7 +84,8 @@ private:
 
 	
 
-	UPROPERTY(VisibleAnywhere)
+	//UPROPERTY(VisibleAnywhere)
+	UPROPERTY()
 	//存储此chunk中每个方块的类型
 	TArray<EBlockType> Blocks;
 

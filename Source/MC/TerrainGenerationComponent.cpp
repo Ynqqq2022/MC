@@ -52,7 +52,7 @@ void UTerrainGenerationComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	{
 		UpdateChunks(PlayChunkIndexDxDy);
 	}
-	// ...
+
 }
 
 FIntPoint UTerrainGenerationComponent::UpdatePlayerChunkIndex()
@@ -307,4 +307,30 @@ void UTerrainGenerationComponent::DestroyBlock(FVector ImpactPoint, FVector Impa
 	
 	//更新邻近方块
 	UpdateEdgeBlocks(PointInBlock,EBlockType::Air);
+}
+
+void UTerrainGenerationComponent::PlaceBlock(FVector ImpactPoint, FVector ImpactNormal, EBlockType Type)
+{
+	//得到要放置的方块内的点
+	const FVector PointInBlockToPlace = ImpactPoint + ImpactNormal * 0.5f * BlockSize;
+	AChunk* ChunkToPlace = GetChunkByLocation(PointInBlockToPlace);
+
+	//以要放置方块的block的中心点为起点
+	FVector StartPos = ChunkToPlace->GetBlockCenterPosition(PointInBlockToPlace);
+	//以起点向下半个方块的位置为终点，Z方向上检测范围小点能实现跳起放置方块。
+	FVector EndPos = StartPos + FVector(0,0,-BlockSize / 2);
+	//X、Y方向上扩展小于一半的大小(为一半时相邻的Block会触发碰撞)，Z方向不扩展。
+	FVector HalfSize = FVector(BlockSize / 2.1, BlockSize / 2.1,0 )	;
+	FHitResult OutHit;
+	bool TraceResult;
+	
+	//TODO:使用overlap能更节约性能？
+	TraceResult = UKismetSystemLibrary::BoxTraceSingle(this, StartPos, EndPos, HalfSize, FRotator(0, 0, 0), TraceTypeQuery2, false, TArray<AActor*>(), EDrawDebugTrace::None, OutHit, false);
+
+	if(!TraceResult)
+	{
+		ChunkToPlace->SetBlock(PointInBlockToPlace, Type);
+		//更新邻近方块
+		UpdateEdgeBlocks(PointInBlockToPlace, Type);
+	}
 }
