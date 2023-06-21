@@ -46,7 +46,7 @@ public:
 
 	//根据玩家位置偏移和渲染距离生成新的Chunk，并删除距离过远的Chunk，且更新碰撞。
 	void UpdateChunks(FIntPoint DxDy);	
-	
+
 	//摧毁命中点所在的方块
 	UFUNCTION(BlueprintCallable)
 	void DestroyBlock(FVector ImpactPoint, FVector ImpactNormal);

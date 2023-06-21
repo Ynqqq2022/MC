@@ -43,6 +43,7 @@ public:
 	*/
 	bool SetBlock(FVector Position, EBlockType Type);
 	
+	//TODO: 实例化网格体快还是程序化网格体快？
 	UPROPERTY(VisibleAnywhere)
 	UProceduralMeshComponent* ProceduralMeshComponent;
 

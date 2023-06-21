@@ -52,7 +52,6 @@ void UTerrainGenerationComponent::TickComponent(float DeltaTime, ELevelTick Tick
 	{
 		UpdateChunks(PlayChunkIndexDxDy);
 	}
-
 }
 
 FIntPoint UTerrainGenerationComponent::UpdatePlayerChunkIndex()
@@ -293,7 +292,7 @@ void UTerrainGenerationComponent::UpdateEdgeBlocks(FVector changedBlockLocation,
 		FIntPoint ToUpdateEdgeChunkIndex = ChangedChunkIndexInWorld + ToUpdateChunkIndexOffset[i];
 		if(Chunks.Contains(ToUpdateEdgeChunkIndex))
 		{
-			Chunks[ToUpdateEdgeChunkIndex]->SetBlock(changedBlockLocation, EBlockType::Air);
+			Chunks[ToUpdateEdgeChunkIndex]->SetBlock(changedBlockLocation, type);
 		}	
 	}
 }
@@ -317,15 +316,15 @@ void UTerrainGenerationComponent::PlaceBlock(FVector ImpactPoint, FVector Impact
 
 	//以要放置方块的block的中心点为起点
 	FVector StartPos = ChunkToPlace->GetBlockCenterPosition(PointInBlockToPlace);
-	//以起点向下半个方块的位置为终点，Z方向上检测范围小点能实现跳起放置方块。
-	FVector EndPos = StartPos + FVector(0,0,-BlockSize / 2);
+	//以起点向下半个方块(小于半个方块)的位置为终点，Z方向上检测范围小点能实现跳起放置方块。
+	FVector EndPos = StartPos + FVector(0,0,-BlockSize / 2.1);
 	//X、Y方向上扩展小于一半的大小(为一半时相邻的Block会触发碰撞)，Z方向不扩展。
 	FVector HalfSize = FVector(BlockSize / 2.1, BlockSize / 2.1,0 )	;
 	FHitResult OutHit;
 	bool TraceResult;
 	
 	//TODO:使用overlap能更节约性能？
-	TraceResult = UKismetSystemLibrary::BoxTraceSingle(this, StartPos, EndPos, HalfSize, FRotator(0, 0, 0), TraceTypeQuery2, false, TArray<AActor*>(), EDrawDebugTrace::None, OutHit, false);
+	TraceResult = UKismetSystemLibrary::BoxTraceSingle(this, StartPos, EndPos, HalfSize, FRotator(0, 0, 0), TraceTypeQuery2, false, TArray<AActor*>(), EDrawDebugTrace::Persistent, OutHit, false);
 
 	if(!TraceResult)
 	{

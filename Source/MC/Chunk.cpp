@@ -233,23 +233,25 @@ void AChunk::UpdateMesh()
 	// 	if(MeshDataMap[i].Vertices.Num()>0)
 	// 		ProceduralMeshComponent->CreateMeshSection(i, MeshDataMap[i].Vertices, MeshDataMap[i].Triangles, MeshDataMap[i].Normals, MeshDataMap[i].UV0, MeshDataMap[i].VertexColors, MeshDataMap[i].Tangents, bHasCollision);
 	// }
-	if(TerrainGenerationComponent != nullptr)
-	{
-		for(auto i : MeshDataMap)
-		{
-			EBlockType CurBlockType = i.Key;
-			FMeshData& CurMeshData = i.Value;
 
-			if(CurMeshData.Vertices.Num()>0)
+
+	for(auto i : MeshDataMap)
+	{
+		EBlockType CurBlockType = i.Key;
+		FMeshData& CurMeshData = i.Value;
+
+		if(CurMeshData.Vertices.Num()>0)
+		{
+			int32 CurBlockTypeInt = static_cast<int32>(CurBlockType);
+			ProceduralMeshComponent->CreateMeshSection(CurBlockTypeInt, CurMeshData.Vertices, CurMeshData.Triangles, CurMeshData.Normals, CurMeshData.UV0, CurMeshData.VertexColors, CurMeshData.Tangents, bHasCollision);
+			if (TerrainGenerationComponent != nullptr)
 			{
-				int32 CurBlockTypeInt = static_cast<int32>(CurBlockType);
-				ProceduralMeshComponent->CreateMeshSection(CurBlockTypeInt, CurMeshData.Vertices, CurMeshData.Triangles, CurMeshData.Normals, CurMeshData.UV0, CurMeshData.VertexColors, CurMeshData.Tangents, bHasCollision);
 				UMaterialInterface* CurBlockMaterial = TerrainGenerationComponent->GetMaterialByType(CurBlockType);
-				if(CurBlockMaterial)
+				if (CurBlockMaterial)
 					ProceduralMeshComponent->SetMaterial(CurBlockTypeInt, CurBlockMaterial);
 			}
-		}	
-	}
+		}
+	}	
 }
 
 FIntVector AChunk::GetBlockIndexInChunk(const FVector WorldPosition)
