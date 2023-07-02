@@ -4,7 +4,7 @@
 #include "Engine/DataTable.h"
 #include "BlockDataStructs.generated.h"
 
-UENUM()
+UENUM(BlueprintType)
 enum class EBlockType : uint8
 {
 	Air UMETA(DisplayName = "Air"),
@@ -17,9 +17,6 @@ USTRUCT()
 struct FBlockAssetData
 {
 	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere)
-	UTexture2D* Icon;
 
 	UPROPERTY(EditAnywhere)
 	UMaterialInterface* Material;

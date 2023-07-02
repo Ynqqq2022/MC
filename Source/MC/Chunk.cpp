@@ -291,3 +291,16 @@ bool AChunk::SetBlock(FVector Position, EBlockType Type)
 	UpdateMesh();
 	return true;
 }
+
+EBlockType AChunk::GetBlockType(FVector Position)
+{
+	FIntVector LocalIndex = GetBlockIndexInChunk(Position);	
+	
+	int32 x = LocalIndex.X; 
+	int32 y = LocalIndex.Y;
+	int32 z = LocalIndex.Z;
+
+	int32 Index = GetIndexInBlocksArray(x, y, z);
+	if(Index <0 || Index > Blocks.Num()) return EBlockType::Air;
+	return Blocks[Index];
+}

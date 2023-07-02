@@ -36,12 +36,17 @@ public:
 	FIntVector GetBlockIndexInChunk(const FVector WorldPosition);
 
 	//传入世界坐标，求该坐标所在Block的中心坐标。
+	UFUNCTION(BlueprintCallable)
 	FVector GetBlockCenterPosition(const FVector WorldPosition);
 	
 	/*传入世界坐标，更改该坐标处方块的类型。应保证坐标在block内,而不是在面上。
 	  block可以是外围一圈的block。返回是否更改成功，
 	*/
 	bool SetBlock(FVector Position, EBlockType Type);
+
+	//获取该世界坐标下方块的类型。
+	UFUNCTION(BlueprintCallable)
+	EBlockType GetBlockType(FVector Position);
 	
 	//TODO: 实例化网格体快还是程序化网格体快？
 	UPROPERTY(VisibleAnywhere)

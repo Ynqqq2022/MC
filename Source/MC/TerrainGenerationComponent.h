@@ -57,6 +57,9 @@ public:
 
 	int32 GetMaterialCount(){ return Materials.Num();}
 
+	UFUNCTION(BlueprintCallable)
+	int32 GetBlockSize(){return BlockSize;}
+	
 	UMaterialInterface* GetMaterialByType(EBlockType Type){ return Materials.Contains(Type) ? Materials[Type] : nullptr;}
 
 private:
@@ -73,7 +76,7 @@ private:
 	TMap<FIntPoint,AChunk*> Chunks;
 
 	//block数据表
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,meta=(RequiredAssetDataTags = "RowStructure=BlockData"))
 	UDataTable* BlockDataTable;
 
 	//存储从数据表中加载的方块材质

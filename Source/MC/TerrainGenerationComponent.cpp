@@ -11,7 +11,6 @@ UTerrainGenerationComponent::UTerrainGenerationComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 	
-	
 	// ...
 }
 
@@ -43,8 +42,7 @@ void UTerrainGenerationComponent::BeginPlay()
 
 
 // Called every frame
-void UTerrainGenerationComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-                                                FActorComponentTickFunction* ThisTickFunction)
+void UTerrainGenerationComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	FIntPoint PlayChunkIndexDxDy = UpdatePlayerChunkIndex();
@@ -324,7 +322,7 @@ void UTerrainGenerationComponent::PlaceBlock(FVector ImpactPoint, FVector Impact
 	bool TraceResult;
 	
 	//TODO:使用overlap能更节约性能？
-	TraceResult = UKismetSystemLibrary::BoxTraceSingle(this, StartPos, EndPos, HalfSize, FRotator(0, 0, 0), TraceTypeQuery2, false, TArray<AActor*>(), EDrawDebugTrace::Persistent, OutHit, false);
+	TraceResult = UKismetSystemLibrary::BoxTraceSingle(this, StartPos, EndPos, HalfSize, FRotator(0, 0, 0), TraceTypeQuery2, false, TArray<AActor*>(), EDrawDebugTrace::None, OutHit, false);
 
 	if(!TraceResult)
 	{
