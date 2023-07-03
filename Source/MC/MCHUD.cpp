@@ -21,6 +21,7 @@ void AMCHUD::BeginPlay()
 		InvectoryPanelWidget = CreateWidget<UUserWidget>(GetWorld(), InvectoryPanelClass);
 		InvectoryPanelWidget->AddToViewport(-1);
 		InvectoryPanelWidget->SetVisibility(ESlateVisibility::Collapsed);
+		bShowInventoryPanel = false;
 	}
 
 	if(ItemBarClass)
@@ -37,6 +38,11 @@ void AMCHUD::ShowInventory() const
 	if(InvectoryPanelWidget)
 	{
 		InvectoryPanelWidget->SetVisibility(ESlateVisibility::Visible);
+		const FInputModeUIOnly InputMode;
+		GetOwningPlayerController()->SetInputMode(InputMode);
+		GetOwningPlayerController()->SetShowMouseCursor(true);
+		InvectoryPanelWidget->bIsFocusable = true;
+		InvectoryPanelWidget->SetFocus();
 	}
 }
 
@@ -45,5 +51,39 @@ void AMCHUD::HideInventory() const
 	if(InvectoryPanelWidget)
 	{
 		InvectoryPanelWidget->SetVisibility(ESlateVisibility::Collapsed);
+		const FInputModeGameOnly InputMode;
+		GetOwningPlayerController()->SetInputMode(InputMode);
+		GetOwningPlayerController()->SetShowMouseCursor(false);
 	}	
+}
+
+void AMCHUD::ShowItemBar() const
+{
+	if(ItemBarWidget)
+	{
+		ItemBarWidget->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void AMCHUD::HideItemBar() const
+{
+	if(ItemBarWidget)
+	{
+		ItemBarWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void AMCHUD::ToggleInventoryPanel() 
+{
+	if(bShowInventoryPanel)
+	{
+		HideInventory();
+		ShowItemBar();
+	}
+	else
+	{
+		ShowInventory();
+		HideItemBar();
+	}
+	bShowInventoryPanel = !bShowInventoryPanel;
 }

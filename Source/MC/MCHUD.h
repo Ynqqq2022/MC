@@ -28,7 +28,12 @@ public:
 	void ShowInventory() const;
 	UFUNCTION(BlueprintCallable)
 	void HideInventory() const;
-	
+	UFUNCTION(BlueprintCallable)
+	void ShowItemBar() const;
+	UFUNCTION(BlueprintCallable)
+	void HideItemBar() const;
+	UFUNCTION(BlueprintCallable)
+	void ToggleInventoryPanel() ;
 protected:
 	virtual void BeginPlay() override;
 
@@ -41,4 +46,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	UUserWidget* ItemBarWidget;
+
+private:
+	bool bShowInventoryPanel;
 };
