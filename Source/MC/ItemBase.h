@@ -12,6 +12,7 @@
 UENUM(BlueprintType)
 enum class EItemType : uint8
 {
+	Nothing UMETA(DisplayName = "Nothing"),
 	Grass UMETA(DisplayName = "Grass"),
 	Stone UMETA(DisplayName = "Stone"),
 	Soil UMETA(DisplayName = "Soil"),
@@ -83,6 +84,7 @@ class MC_API UItemBase : public UObject
 	GENERATED_BODY()
 
 public:
+	UItemBase(){ItemType = EItemType::Nothing; Amount = 0;}
 	UPROPERTY(BlueprintReadOnly)
 	EItemType ItemType;
 	UPROPERTY(BlueprintReadOnly)

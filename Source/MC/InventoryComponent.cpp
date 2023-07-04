@@ -18,8 +18,14 @@ void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	Inventory.SetNum(InventorySize);
-	ItemBar.SetNum(ItemBarSize);
+	for(int32 i = 0; i < InventorySize; i++)
+	{
+		Inventory.Add(NewObject<UItemBase>());
+	}
+	for(int32 i = 0; i < ItemBarSize; i++)
+	{
+		ItemBar.Add(NewObject<UItemBase>());
+	}
 
 	if (ItemDataTable)
 	{
@@ -56,11 +62,11 @@ FItemAssetData UInventoryComponent::GetAssetDataByItemType(EItemType ItemType)
 EItemType UInventoryComponent::ConvertBlockTypeToItemType(EBlockType BlockType)
 {
 	switch (BlockType) {
-		case EBlockType::Air: return EItemType::Grass;;
+		case EBlockType::Air: return EItemType::Nothing;;
 		case EBlockType::Grass: return EItemType::Grass;
 		case EBlockType::Stone: return EItemType::Stone;;
 		case EBlockType::Soil:return EItemType::Soil;;
-		default: return EItemType::Grass;
+		default: return EItemType::Nothing;
 	}
 }
 
@@ -75,7 +81,7 @@ int32 UInventoryComponent::AddItemToContainer(TArray<UItemBase*>& Container, int
 		if (Amount <= 0) return 0;
 		UItemBase* CurSlotItem = Container[i];
 		//空的Slot
-		if (!CurSlotItem)
+		if (CurSlotItem->ItemType == EItemType::Nothing)
 		{
 			if (FirstEmptySlotIndex == -1)FirstEmptySlotIndex = i;
 		}
@@ -101,22 +107,18 @@ int32 UInventoryComponent::AddItemToContainer(TArray<UItemBase*>& Container, int
 			if (Amount <= 0) return 0;
 			UItemBase* CurSlotItem = Container[i];
 			//空的Slot
-			if (!CurSlotItem)
+			if (CurSlotItem->ItemType == EItemType::Nothing)
 			{
 				if (Amount < MaxStackSize)
 				{
-					UItemBase* TempItem = NewObject<UItemBase>();
-					TempItem->ItemType = ItemType;
-					TempItem->Amount = Amount;
-					Container[i] = TempItem;
+					Container[i]->ItemType = ItemType;
+					Container[i]->Amount = Amount;
 					Amount = 0;
 				}
 				else
 				{
-					UItemBase* TempItem = NewObject<UItemBase>();
-					TempItem->ItemType = ItemType;
-					TempItem->Amount = MaxStackSize;
-					Container[i] = TempItem;
+					Container[i]->ItemType = ItemType;
+					Container[i]->Amount = MaxStackSize;
 					Amount -= MaxStackSize;
 				}
 			}
