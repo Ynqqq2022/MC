@@ -18,13 +18,9 @@ void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	for(int32 i = 0; i < InventorySize; i++)
+	for(int32 i = 0; i < ItemBarSize + InventorySize; i++)
 	{
 		Inventory.Add(NewObject<UItemBase>());
-	}
-	for(int32 i = 0; i < ItemBarSize; i++)
-	{
-		ItemBar.Add(NewObject<UItemBase>());
 	}
 
 	if (ItemDataTable)
@@ -70,71 +66,60 @@ EItemType UInventoryComponent::ConvertBlockTypeToItemType(EBlockType BlockType)
 	}
 }
 
-int32 UInventoryComponent::AddItemToContainer(TArray<UItemBase*>& Container, int32 ContainerSize, EItemType ItemType,
-                                              int32 Amount)
+int32 UInventoryComponent::AddItemToInventory(EItemType ItemType, int32 Amount)
 {
 	FItemData* CurItemData = ItemData.Find(ItemType);
 	int MaxStackSize = CurItemData ? CurItemData->NumericData.MaxStackSize : 0;
 	int32 FirstEmptySlotIndex = -1;
-	for (int i = 0; i < ContainerSize; i++)
+	for (int i = 0; i < ItemBarSize + InventorySize; i++)
 	{
 		if (Amount <= 0) return 0;
-		UItemBase* CurSlotItem = Container[i];
+		UItemBase* CurSlotItem = Inventory[i];
 		//空的Slot
 		if (CurSlotItem->ItemType == EItemType::Nothing)
 		{
 			if (FirstEmptySlotIndex == -1)FirstEmptySlotIndex = i;
 		}
-		else if (Container[i]->ItemType == ItemType) //同类物品
+		else if (Inventory[i]->ItemType == ItemType) //同类物品
 		{
-			if (Amount + Container[i]->Amount < MaxStackSize)
+			if (Amount + Inventory[i]->Amount < MaxStackSize)
 			{
-				Container[i]->Amount += Amount;
+				Inventory[i]->Amount += Amount;
 				Amount = 0;
 			}
 			else
 			{
-				Amount = Amount - (MaxStackSize - Container[i]->Amount);
-				Container[i]->Amount = MaxStackSize;
+				Amount = Amount - (MaxStackSize - Inventory[i]->Amount);
+				Inventory[i]->Amount = MaxStackSize;
 			}
 		}
 	}
 	//找完了，除了前面的空位，后面没有已经存在的同类格子。
 	if (Amount > 0 && FirstEmptySlotIndex != -1)
 	{
-		for (int i = FirstEmptySlotIndex; i < ContainerSize; i++)
+		for (int i = FirstEmptySlotIndex; i < ItemBarSize + InventorySize; i++)
 		{
 			if (Amount <= 0) return 0;
-			UItemBase* CurSlotItem = Container[i];
+			UItemBase* CurSlotItem = Inventory[i];
 			//空的Slot
 			if (CurSlotItem->ItemType == EItemType::Nothing)
 			{
 				if (Amount < MaxStackSize)
 				{
-					Container[i]->ItemType = ItemType;
-					Container[i]->Amount = Amount;
+					Inventory[i]->ItemType = ItemType;
+					Inventory[i]->Amount = Amount;
 					Amount = 0;
 				}
 				else
 				{
-					Container[i]->ItemType = ItemType;
-					Container[i]->Amount = MaxStackSize;
+					Inventory[i]->ItemType = ItemType;
+					Inventory[i]->Amount = MaxStackSize;
 					Amount -= MaxStackSize;
 				}
 			}
 		}
 	}
 	return Amount;
-}
-
-int32 UInventoryComponent::AddItemToItemBar(EItemType ItemType, int32 Amount)
-{
-	return AddItemToContainer(ItemBar, ItemBarSize, ItemType, Amount);
-}
-
-int32 UInventoryComponent::AddItemToInventory(EItemType ItemType, int32 Amount)
-{
-	return AddItemToContainer(Inventory, InventorySize, ItemType, Amount);
 }
 
 int32 UInventoryComponent::GetLeftItemAmount(EItemType ItemType, int32 SourceAmount, int32 TargetAmount)

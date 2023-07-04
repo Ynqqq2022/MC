@@ -31,17 +31,14 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 ItemBarSize = 10;
+	
 	//物品数据
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TMap<EItemType, FItemData> ItemData;
 
-	//背包栏
+	//背包栏,前ItemBarSize个元素为手持栏中物品，后InventorySize个元素为背包栏中物品。
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TArray<UItemBase*> Inventory;
-
-	//下方物品栏
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	TArray<UItemBase*> ItemBar;
 
 	UFUNCTION(BlueprintCallable)
 	FItemAssetData GetAssetDataByItemType(EItemType ItemType);
@@ -49,11 +46,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	EItemType ConvertBlockTypeToItemType(EBlockType BlockType);
 	
-	int32 AddItemToContainer(TArray<UItemBase*> & Container,int32 ContainerSize, EItemType ItemType , int32 Amount);
-	
-	//为下方物品栏添加物品，返回未添加的数量。
-	UFUNCTION(BlueprintCallable)
-	int32 AddItemToItemBar(EItemType ItemType , int32 Amount);
 	//为背包栏添加物品，返回未添加的数量。
 	UFUNCTION(BlueprintCallable)
 	int32 AddItemToInventory(EItemType ItemType , int32 Amount);
@@ -64,7 +56,6 @@ public:
 	
 private:
 	//物品数据表
-	//UPROPERTY(EditAnywhere,meta=(RequiredAssetDataTags = "RowStructure=ItemData"))
 	UPROPERTY(EditAnywhere,meta=(RequiredAssetDataTags = "RowStructure=ItemData"))
 	UDataTable* ItemDataTable;
 };
