@@ -134,3 +134,10 @@ int32 UInventoryComponent::AddItemToInventory(EItemType ItemType, int32 Amount)
 {
 	return AddItemToContainer(Inventory, InventorySize, ItemType, Amount);
 }
+
+int32 UInventoryComponent::GetLeftItemAmount(EItemType ItemType, int32 SourceAmount, int32 TargetAmount)
+{
+	FItemData* CurItemData = ItemData.Find(ItemType);
+	int32 MaxStackSize = CurItemData ? CurItemData->NumericData.MaxStackSize : 0;
+	return MaxStackSize - TargetAmount >= SourceAmount ? 0 : SourceAmount - (MaxStackSize - TargetAmount);
+}

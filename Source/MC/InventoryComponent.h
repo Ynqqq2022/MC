@@ -58,6 +58,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	int32 AddItemToInventory(EItemType ItemType , int32 Amount);
 
+	//辅助函数，计算物品叠加后剩余的数量。
+	UFUNCTION(BlueprintCallable)
+	int32 GetLeftItemAmount(EItemType ItemType, int32 SourceAmount, int32 TargetAmount);
+
+	//UFUNCTION(BlueprintCallable)
+	
 private:
 	//物品数据表
 	//UPROPERTY(EditAnywhere,meta=(RequiredAssetDataTags = "RowStructure=ItemData"))

@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "UObject/NoExportTypes.h"
 #include "ItemBase.generated.h"
 
 /**

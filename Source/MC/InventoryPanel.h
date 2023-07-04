@@ -13,6 +13,8 @@ UCLASS()
 class MC_API UInventoryPanel: public UUserWidget
 {
 	GENERATED_BODY()
+
+
 public:
 	
 };
