@@ -31,17 +31,7 @@ void UInventoryComponent::BeginPlay()
 			if (ItemDataPtr)
 			{
 				ItemData.Add(ItemDataPtr->ItemType, *ItemDataPtr);
-				InventoryItemIndexMap.Add(ItemDataPtr->ItemType, TSet<int32>());
 			}
-		}
-
-		auto NothingIndexSet = InventoryItemIndexMap.Find(EItemType::Nothing);
-		if(NothingIndexSet)
-		{
-			for(int32 i = 0; i< InventorySize + ItemBarSize; i++)
-			{
-				NothingIndexSet->Add(i);
-			}	
 		}
 	}
 	 //AddItemToItemBar(EItemType::Grass, 20);
