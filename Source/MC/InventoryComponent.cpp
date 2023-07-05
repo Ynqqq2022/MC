@@ -17,7 +17,6 @@ UInventoryComponent::UInventoryComponent()
 void UInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
 	for(int32 i = 0; i < ItemBarSize + InventorySize; i++)
 	{
 		Inventory.Add(NewObject<UItemBase>());
@@ -32,6 +31,7 @@ void UInventoryComponent::BeginPlay()
 			if (ItemDataPtr)
 			{
 				ItemData.Add(ItemDataPtr->ItemType, *ItemDataPtr);
+				//InventoryItemIndexMap.Add(ItemDataPtr->ItemType, TSet<int32>());
 			}
 		}
 	}
@@ -49,9 +49,9 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	// ...
 }
 
-FItemAssetData UInventoryComponent::GetAssetDataByItemType(EItemType ItemType)
+FItemAssetData UInventoryComponent::GetAssetDataByItemType(EItemType ItemType) const
 {
-	FItemData* CurItemData = ItemData.Find(ItemType);
+	const FItemData* CurItemData = ItemData.Find(ItemType);
 	return CurItemData ? CurItemData->AssetData: FItemAssetData();	
 }
 
@@ -71,9 +71,10 @@ int32 UInventoryComponent::AddItemToInventory(EItemType ItemType, int32 Amount)
 	FItemData* CurItemData = ItemData.Find(ItemType);
 	int MaxStackSize = CurItemData ? CurItemData->NumericData.MaxStackSize : 0;
 	int32 FirstEmptySlotIndex = -1;
+
 	for (int i = 0; i < ItemBarSize + InventorySize; i++)
 	{
-		if (Amount <= 0) return 0;
+		if (Amount <= 0) break;
 		UItemBase* CurSlotItem = Inventory[i];
 		//空的Slot
 		if (CurSlotItem->ItemType == EItemType::Nothing)
@@ -99,7 +100,7 @@ int32 UInventoryComponent::AddItemToInventory(EItemType ItemType, int32 Amount)
 	{
 		for (int i = FirstEmptySlotIndex; i < ItemBarSize + InventorySize; i++)
 		{
-			if (Amount <= 0) return 0;
+			if (Amount <= 0) break;
 			UItemBase* CurSlotItem = Inventory[i];
 			//空的Slot
 			if (CurSlotItem->ItemType == EItemType::Nothing)
@@ -119,7 +120,28 @@ int32 UInventoryComponent::AddItemToInventory(EItemType ItemType, int32 Amount)
 			}
 		}
 	}
+	InventoryChanged.Broadcast();
 	return Amount;
+}
+
+int32 UInventoryComponent::AddItemToInventoryByIndex(int32 Index, EItemType ItemType, int32 Amount)
+{
+	UItemBase* TempItemBase = Inventory[Index];
+	if(TempItemBase->ItemType == ItemType)
+	{
+		int32 LeftAmount = GetLeftItemAmount(ItemType, Amount, TempItemBase->Amount);	
+		TempItemBase->Amount += Amount - LeftAmount;
+		return LeftAmount;
+	}
+	return Amount;
+}
+
+void UInventoryComponent::SwapItemByIndex(int32 Index, UPARAM(ref)EItemType &ItemType, UPARAM(ref)int32 &Amount)
+{
+	UItemBase* TempItemBase = Inventory[Index];
+	Swap(ItemType, TempItemBase->ItemType);
+	Swap(Amount, TempItemBase->Amount);
+	InventoryChanged.Broadcast();
 }
 
 int32 UInventoryComponent::GetLeftItemAmount(EItemType ItemType, int32 SourceAmount, int32 TargetAmount)
@@ -127,4 +149,20 @@ int32 UInventoryComponent::GetLeftItemAmount(EItemType ItemType, int32 SourceAmo
 	FItemData* CurItemData = ItemData.Find(ItemType);
 	int32 MaxStackSize = CurItemData ? CurItemData->NumericData.MaxStackSize : 0;
 	return MaxStackSize - TargetAmount >= SourceAmount ? 0 : SourceAmount - (MaxStackSize - TargetAmount);
+}
+
+int32 UInventoryComponent::RemoveItemByIndex(int32 Index)
+{
+	int32 AmountToRemove = Inventory[Index]->Amount;
+	Inventory[Index] = NewObject<UItemBase>();
+	InventoryChanged.Broadcast();
+	return AmountToRemove;
+}
+
+int32 UInventoryComponent::RemoveHalfItemByIndex(int32 Index)
+{
+	int32 AmountToRemove = Inventory[Index]->Amount / 2;
+	Inventory[Index]->Amount -= AmountToRemove;
+	InventoryChanged.Broadcast();
+	return AmountToRemove;
 }
