@@ -31,11 +31,19 @@ void UInventoryComponent::BeginPlay()
 			if (ItemDataPtr)
 			{
 				ItemData.Add(ItemDataPtr->ItemType, *ItemDataPtr);
-				//InventoryItemIndexMap.Add(ItemDataPtr->ItemType, TSet<int32>());
+				InventoryItemIndexMap.Add(ItemDataPtr->ItemType, TSet<int32>());
 			}
 		}
-	}
 
+		auto NothingIndexSet = InventoryItemIndexMap.Find(EItemType::Nothing);
+		if(NothingIndexSet)
+		{
+			for(int32 i = 0; i< InventorySize + ItemBarSize; i++)
+			{
+				NothingIndexSet->Add(i);
+			}	
+		}
+	}
 	 //AddItemToItemBar(EItemType::Grass, 20);
 	// AddItemToItemBar(EItemType::Soil, 3);
 	// ...
@@ -68,72 +76,74 @@ EItemType UInventoryComponent::ConvertBlockTypeToItemType(EBlockType BlockType)
 
 int32 UInventoryComponent::AddItemToInventory(EItemType ItemType, int32 Amount)
 {
+	/*
+	 * 先检测Bar里有没有同类的，有则在上面+，满了则下一个，都满了则第一个空的。
+	 *							没有则第一个空的。
+	 *	bar都满了，则看inventory里有没有同类的，有则在上面+，满了则下一个，都满了则第一个空的。
+	 *								没有则第一个空的。
+	 */
 	FItemData* CurItemData = ItemData.Find(ItemType);
-	int MaxStackSize = CurItemData ? CurItemData->NumericData.MaxStackSize : 0;
-	int32 FirstEmptySlotIndex = -1;
+	int32 CurItemMaxSize = CurItemData->NumericData.MaxStackSize;
+	
+	auto SameKindPred = [ItemType, CurItemMaxSize](const UItemBase* Ele)
+	{
+		return Ele->ItemType == ItemType && Ele->Amount < CurItemMaxSize;
+	};
 
-	for (int i = 0; i < ItemBarSize + InventorySize; i++)
+	auto EmptySlotPred = [](const UItemBase* Ele)
 	{
-		if (Amount <= 0) break;
-		UItemBase* CurSlotItem = Inventory[i];
-		//空的Slot
-		if (CurSlotItem->ItemType == EItemType::Nothing)
-		{
-			if (FirstEmptySlotIndex == -1)FirstEmptySlotIndex = i;
-		}
-		else if (Inventory[i]->ItemType == ItemType) //同类物品
-		{
-			if (Amount + Inventory[i]->Amount < MaxStackSize)
-			{
-				Inventory[i]->Amount += Amount;
-				Amount = 0;
-			}
-			else
-			{
-				Amount = Amount - (MaxStackSize - Inventory[i]->Amount);
-				Inventory[i]->Amount = MaxStackSize;
-			}
-		}
-	}
-	//找完了，除了前面的空位，后面没有已经存在的同类格子。
-	if (Amount > 0 && FirstEmptySlotIndex != -1)
+		return Ele->ItemType == EItemType::Nothing;
+	};
+
+	//先在手持栏中找是否存有同类物品，有的话叠加。
+	int32  ThisTypeIndex = Inventory.IndexOfByPredicate(SameKindPred);
+	while(ThisTypeIndex != INDEX_NONE && ThisTypeIndex < ItemBarSize)
 	{
-		for (int i = FirstEmptySlotIndex; i < ItemBarSize + InventorySize; i++)
-		{
-			if (Amount <= 0) break;
-			UItemBase* CurSlotItem = Inventory[i];
-			//空的Slot
-			if (CurSlotItem->ItemType == EItemType::Nothing)
-			{
-				if (Amount < MaxStackSize)
-				{
-					Inventory[i]->ItemType = ItemType;
-					Inventory[i]->Amount = Amount;
-					Amount = 0;
-				}
-				else
-				{
-					Inventory[i]->ItemType = ItemType;
-					Inventory[i]->Amount = MaxStackSize;
-					Amount -= MaxStackSize;
-				}
-			}
-		}
+		if(Amount <= 0) break;
+		AddItemToInventoryByIndex(ThisTypeIndex, ItemType, Amount);	
+		ThisTypeIndex = Inventory.IndexOfByPredicate(SameKindPred);
 	}
-	InventoryChanged.Broadcast();
+
+	//手持栏无同类物品，或同类物品已叠加满，使用手持栏空余格子。
+	int32  EmptySlotIndex = Inventory.IndexOfByPredicate(EmptySlotPred);
+	while(EmptySlotIndex != INDEX_NONE && EmptySlotIndex < ItemBarSize)
+	{
+		if(Amount <= 0) break;
+		AddItemToInventoryByIndex(EmptySlotIndex, ItemType, Amount);	
+		EmptySlotIndex = Inventory.IndexOfByPredicate(EmptySlotPred);
+	}
+
+	//手持栏满了，存入背包栏，先与同类物品叠加。
+	ThisTypeIndex = Inventory.IndexOfByPredicate(SameKindPred);
+	while(ThisTypeIndex != INDEX_NONE && ThisTypeIndex >= ItemBarSize)
+	{
+		if(Amount <= 0) break;
+		AddItemToInventoryByIndex(ThisTypeIndex, ItemType, Amount);	
+		ThisTypeIndex = Inventory.IndexOfByPredicate(SameKindPred);
+	}
+
+	//找背包栏空余处存放。
+	EmptySlotIndex = Inventory.IndexOfByPredicate(EmptySlotPred);
+	while(EmptySlotIndex != INDEX_NONE && EmptySlotIndex >= ItemBarSize)
+	{
+		if(Amount <= 0) break;
+		AddItemToInventoryByIndex(EmptySlotIndex, ItemType, Amount);	
+		EmptySlotIndex = Inventory.IndexOfByPredicate(EmptySlotPred);
+	}
+	
 	return Amount;
 }
 
-int32 UInventoryComponent::AddItemToInventoryByIndex(int32 Index, EItemType ItemType, int32 Amount)
+void UInventoryComponent::AddItemToInventoryByIndex(int32 Index, EItemType ItemType, UPARAM(ref)int32 &Amount)
 {
 	UItemBase* TempItemBase = Inventory[Index];
-	if(TempItemBase->ItemType == ItemType)
+	if(TempItemBase->ItemType == EItemType::Nothing || TempItemBase->ItemType == ItemType)
 	{
-		int32 LeftAmount = GetLeftItemAmount(ItemType, Amount, TempItemBase->Amount);	
+		int32 LeftAmount = GetLeftItemAmount(ItemType, Amount, TempItemBase->Amount);
+		Swap(TempItemBase->ItemType ,ItemType);
 		TempItemBase->Amount += Amount - LeftAmount;
-		return LeftAmount;
+		Amount = LeftAmount;
 	}
-	return Amount;
 }
 
 void UInventoryComponent::SwapItemByIndex(int32 Index, UPARAM(ref)EItemType &ItemType, UPARAM(ref)int32 &Amount)
@@ -141,7 +151,6 @@ void UInventoryComponent::SwapItemByIndex(int32 Index, UPARAM(ref)EItemType &Ite
 	UItemBase* TempItemBase = Inventory[Index];
 	Swap(ItemType, TempItemBase->ItemType);
 	Swap(Amount, TempItemBase->Amount);
-	InventoryChanged.Broadcast();
 }
 
 int32 UInventoryComponent::GetLeftItemAmount(EItemType ItemType, int32 SourceAmount, int32 TargetAmount)
@@ -155,7 +164,6 @@ int32 UInventoryComponent::RemoveItemByIndex(int32 Index)
 {
 	int32 AmountToRemove = Inventory[Index]->Amount;
 	Inventory[Index] = NewObject<UItemBase>();
-	InventoryChanged.Broadcast();
 	return AmountToRemove;
 }
 
@@ -163,6 +171,5 @@ int32 UInventoryComponent::RemoveHalfItemByIndex(int32 Index)
 {
 	int32 AmountToRemove = Inventory[Index]->Amount / 2;
 	Inventory[Index]->Amount -= AmountToRemove;
-	InventoryChanged.Broadcast();
 	return AmountToRemove;
 }

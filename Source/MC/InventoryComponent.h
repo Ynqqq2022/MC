@@ -28,7 +28,7 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	UPROPERTY(BlueprintAssignable)
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FInventoryChanged InventoryChanged;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -50,19 +50,23 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	EItemType ConvertBlockTypeToItemType(EBlockType BlockType);
+
 	
-	//为背包栏添加物品，返回未添加的数量。
+	/*自动找到合适的位置添加添加物品，返回未添加的数量。
+	 * 优先先手持栏，优先同类物品叠加，再空余的手持栏。手持栏满了则放入背包。
+	 */
 	UFUNCTION(BlueprintCallable)
 	int32 AddItemToInventory(EItemType ItemType , int32 Amount);
 
-	//在背包栏指定位置添加物品，返回未添加的数量。
+	//在背包栏指定位置添加物品,通过引用传递Amount,最终表示未添加的数量。
 	UFUNCTION(BlueprintCallable)
-	int32 AddItemToInventoryByIndex(int32 Index, EItemType ItemType , int32 Amount);
+	void AddItemToInventoryByIndex(int32 Index, EItemType ItemType, UPARAM(ref)int32 &Amount);
 
+	//互换背包指定位置的物品。
 	UFUNCTION(BlueprintCallable)
 	void SwapItemByIndex(int32 Index, UPARAM(ref)EItemType &ItemType, UPARAM(ref)int32 &Amount);
 
-	//辅助函数，计算物品叠加后剩余的数量。
+	//辅助函数，计算同类物品叠加后剩余的数量。
 	UFUNCTION(BlueprintCallable)
 	int32 GetLeftItemAmount(EItemType ItemType, int32 SourceAmount, int32 TargetAmount);
 	
@@ -79,6 +83,4 @@ private:
 	UPROPERTY(EditAnywhere,meta=(RequiredAssetDataTags = "RowStructure=ItemData"))
 	UDataTable* ItemDataTable;
 
-	//记录第i类物品存放在哪些格子中。
-	//TMap<EItemType, TSet<int32>> InventoryItemIndexMap;
 };
