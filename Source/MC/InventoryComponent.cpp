@@ -14,7 +14,6 @@ UInventoryComponent::UInventoryComponent()
 	// ...
 }
 
-
 // Called when the game starts
 void UInventoryComponent::BeginPlay()
 {
@@ -22,6 +21,7 @@ void UInventoryComponent::BeginPlay()
 	for (int32 i = 0; i < ItemBarSize + InventorySize; i++)
 	{
 		Inventory.Add(NewObject<UItemBase>());
+		InventoryBackUp.Add(NewObject<UItemBase>());
 	}
 
 	if (ItemDataTable)
@@ -36,9 +36,12 @@ void UInventoryComponent::BeginPlay()
 			}
 		}
 	}
-	AutoAddItemToInventory(EItemType::Grass, 64*3);
-	AutoAddItemToInventory(EItemType::Soil, 64*3);
-	AutoAddItemToInventory(EItemType::Stone, 64*3);
+	AutoAddItemToInventory(EItemType::Grass, 64 * 3);
+	AutoAddItemToInventory(EItemType::Soil, 64 * 3);
+	AutoAddItemToInventory(EItemType::Stone, 64 * 3);
+
+	//此时character未初始化好？响应不了这个事件？
+	//SendInventoryChangedMessage();
 	// ...
 }
 
@@ -53,6 +56,12 @@ void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 FItemAssetData UInventoryComponent::GetAssetDataByItemType(EItemType ItemType) const
 {
 	const FItemData* CurItemData = ItemData.Find(ItemType);
+	return CurItemData ? CurItemData->AssetData : FItemAssetData();
+}
+
+FItemAssetData UInventoryComponent::GetSelectItemAssetData() const
+{
+	const FItemData* CurItemData = ItemData.Find(Inventory[CurSelectItemBarIndex]->ItemType);
 	return CurItemData ? CurItemData->AssetData : FItemAssetData();
 }
 
@@ -72,6 +81,16 @@ EItemType UInventoryComponent::ConvertBlockTypeToItemType(EBlockType BlockType)
 	case EBlockType::Soil: return EItemType::Soil;;
 	default: return EItemType::Nothing;
 	}
+}
+
+EBlockType UInventoryComponent::ConvertItemTypeToBlockType(EItemType ItemType)
+{
+	switch(ItemType) {
+		case EItemType::Nothing: return EBlockType::Air;
+		case EItemType::Grass: return EBlockType::Grass;
+		case EItemType::Stone: return EBlockType::Stone;
+		case EItemType::Soil: return EBlockType::Soil;
+		default:return EBlockType::Air; }
 }
 
 int32 UInventoryComponent::AutoAddItemToInventory(EItemType ItemType, int32 Amount)
@@ -129,7 +148,6 @@ int32 UInventoryComponent::AutoAddItemToInventory(EItemType ItemType, int32 Amou
 		AddItemToInventoryByIndex(EmptySlotIndex, ItemType, Amount);
 		EmptySlotIndex = Inventory.IndexOfByPredicate(EmptySlotPred);
 	}
-
 	return Amount;
 }
 
@@ -222,10 +240,8 @@ int32 UInventoryComponent::CanAddItem(int32 Index, EItemType ItemType, int32 Amo
 
 void UInventoryComponent::BackUp()
 {
-	InventoryBackUp.SetNum(Inventory.Num());
 	for (int i = 0; i < Inventory.Num(); i++)
 	{
-		InventoryBackUp[i] = NewObject<UItemBase>();
 		InventoryBackUp[i]->Amount = Inventory[i]->Amount;
 		InventoryBackUp[i]->ItemType = Inventory[i]->ItemType;
 	}
@@ -267,7 +283,7 @@ int32 UInventoryComponent::AutoDiv(EItemType ItemType, int32 TotalAmount, TArray
 	return 0;
 }
 
-void UInventoryComponent::GetItemStack(EItemType ItemType,  UPARAM(ref)int32& CurAmount)
+void UInventoryComponent::GetItemStack(EItemType ItemType, UPARAM(ref)int32& CurAmount)
 {
 	TArray<TPair<int32, int32>> ThisKindSlotIndices;
 	for (int i = 0; i < InventorySize + ItemBarSize; i++)
@@ -277,21 +293,62 @@ void UInventoryComponent::GetItemStack(EItemType ItemType,  UPARAM(ref)int32& Cu
 			ThisKindSlotIndices.Add(TPair<int32, int32>(i, Inventory[i]->Amount));
 		}
 	}
-	
+
 	ThisKindSlotIndices.Sort(
 		[](const TPair<int32, int32> X1, const TPair<int32, int32> X2)
 		{
 			return X1.Get<1>() <= X2.Get<1>();
 		});
 
-	for(auto i: ThisKindSlotIndices)
+	for (auto i : ThisKindSlotIndices)
 	{
-		int32 LeftAmount = GetLeftItemAmount(ItemType, i.Get<1>(),CurAmount);
+		int32 LeftAmount = GetLeftItemAmount(ItemType, i.Get<1>(), CurAmount);
 		CurAmount += Inventory[i.Get<0>()]->Amount - LeftAmount;
-		Inventory[i.Get<0>()]->Amount = LeftAmount;	
-		if(LeftAmount == 0)
+		Inventory[i.Get<0>()]->Amount = LeftAmount;
+		if (LeftAmount == 0)
 		{
 			Inventory[i.Get<0>()]->ItemType = EItemType::Nothing;
 		}
+	}
+}
+
+void UInventoryComponent::ChangeCurSelectByIndex(int32 Index)
+{
+	if (Index < ItemBarSize && Index > 0 && Index != CurSelectItemBarIndex)
+	{
+		CurSelectItemBarIndex = Index;
+		SelectSlotIndexChanged.Broadcast();
+		SendSelectItemChangeMessage();	
+	}
+}
+
+void UInventoryComponent::ChangeCurSelectForward()
+{
+	CurSelectItemBarIndex = (CurSelectItemBarIndex + 1) % ItemBarSize;
+	SelectSlotIndexChanged.Broadcast();
+	SendSelectItemChangeMessage();	
+}
+
+void UInventoryComponent::ChangeCurSelectBackward()
+{
+	--CurSelectItemBarIndex;
+	if(CurSelectItemBarIndex < 0)
+		CurSelectItemBarIndex = ItemBarSize - 1;
+	SelectSlotIndexChanged.Broadcast();
+	SendSelectItemChangeMessage();	
+}
+
+void UInventoryComponent::SendInventoryChangedMessage()
+{
+	InventoryChanged.Broadcast();
+	SendSelectItemChangeMessage();	
+}
+
+void UInventoryComponent::SendSelectItemChangeMessage()
+{
+	if(PreSelectItemType != Inventory[CurSelectItemBarIndex]->ItemType)
+	{
+		PreSelectItemType = Inventory[CurSelectItemBarIndex]->ItemType;
+		SelectItemTypeChanged.Broadcast();
 	}
 }
