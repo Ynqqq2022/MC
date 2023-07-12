@@ -2,6 +2,8 @@
 
 
 #include "TerrainGenerationComponent.h"
+
+#include "MCSaveGameChunk.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
@@ -201,6 +203,7 @@ void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 				const FIntPoint ChunkIndexInWorld =  FIntPoint{x, y};
 				if(Chunks.Contains(ChunkIndexInWorld))
 				{
+					Chunks[ChunkIndexInWorld]->SaveChunk();
 					Chunks[ChunkIndexInWorld]->Destroy();
 					Chunks.Remove(ChunkIndexInWorld);
 				}
@@ -239,6 +242,14 @@ void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 			}
 		}
 	}	
+}
+
+void UTerrainGenerationComponent::SaveTerrain()
+{
+	for(auto i:Chunks)
+	{
+		i.Value->SaveChunk();
+	}
 }
 
 AChunk* UTerrainGenerationComponent::GetChunkByLocation(FVector ChunkLocation)
@@ -306,7 +317,7 @@ void UTerrainGenerationComponent::DestroyBlock(FVector ImpactPoint, FVector Impa
 	UpdateEdgeBlocks(PointInBlock,EBlockType::Air);
 }
 
-void UTerrainGenerationComponent::PlaceBlock(FVector ImpactPoint, FVector ImpactNormal, EBlockType Type)
+bool UTerrainGenerationComponent::PlaceBlock(FVector ImpactPoint, FVector ImpactNormal, EBlockType Type)
 {
 	//得到要放置的方块内的点
 	const FVector PointInBlockToPlace = ImpactPoint + ImpactNormal * 0.5f * BlockSize;
@@ -329,5 +340,7 @@ void UTerrainGenerationComponent::PlaceBlock(FVector ImpactPoint, FVector Impact
 		ChunkToPlace->SetBlock(PointInBlockToPlace, Type);
 		//更新邻近方块
 		UpdateEdgeBlocks(PointInBlockToPlace, Type);
+		return true;
 	}
+	return false;
 }

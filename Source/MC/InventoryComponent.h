@@ -108,6 +108,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	int32 RemoveHalfItemByIndex(int32 Index);
 
+	//删除一个选中的物品。
+	UFUNCTION(BlueprintCallable)
+	void RemoveOneSelectItem();
+	
 	//直接设置背包的函数，用于复原操作。。。合理吗？
 	UFUNCTION(BlueprintCallable)
 	void SetItemByIndex(int32 Index, EItemType ItemType, int32 Amount);
@@ -131,6 +135,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	EItemType GetCurSelectItemType()const{return Inventory[CurSelectItemBarIndex]->ItemType;}
 
+	//返回当前选择的物品的种类对应的BlockType,不是方块则返回EBlockType::Air。
+	UFUNCTION(BlueprintCallable)
+	EBlockType GetCurSelectBlockType()const{return ConvertItemTypeToBlockType(Inventory[CurSelectItemBarIndex]->ItemType);}
+	
 	//设置当前选中的物品
 	UFUNCTION(BlueprintCallable)
 	void ChangeCurSelectByIndex(int32 Index);

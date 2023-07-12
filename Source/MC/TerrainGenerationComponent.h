@@ -53,7 +53,7 @@ public:
 
 	//放置方块
 	UFUNCTION(BlueprintCallable)
-	void PlaceBlock(FVector ImpactPoint, FVector ImpactNormal,EBlockType Type);
+	bool PlaceBlock(FVector ImpactPoint, FVector ImpactNormal,EBlockType Type);
 
 	int32 GetMaterialCount(){ return Materials.Num();}
 
@@ -62,6 +62,8 @@ public:
 	
 	UMaterialInterface* GetMaterialByType(EBlockType Type){ return Materials.Contains(Type) ? Materials[Type] : nullptr;}
 
+	UFUNCTION(BlueprintCallable)
+	void SaveTerrain();
 private:
 	//通过世界坐标获取chunk
 	AChunk* GetChunkByLocation(FVector ChunkLocation);

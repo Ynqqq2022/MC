@@ -47,7 +47,9 @@ public:
 	//获取该世界坐标下方块的类型。
 	UFUNCTION(BlueprintCallable)
 	EBlockType GetBlockType(FVector Position);
-	
+
+	UFUNCTION()
+	void SaveChunk();
 	//TODO: 实例化网格体快还是程序化网格体快？
 	UPROPERTY(VisibleAnywhere)
 	UProceduralMeshComponent* ProceduralMeshComponent;
@@ -88,12 +90,13 @@ private:
 	//为每一方块生成渲染数据，提供给程序化网格体组件。
 	void UpdateMesh();
 
-	
-
+public:
 	//UPROPERTY(VisibleAnywhere)
 	UPROPERTY()
 	//存储此chunk中每个方块的类型
 	TArray<EBlockType> Blocks;
-
+	//存储此chunk中被更改过的方块。
+	TMap<int32, EBlockType> ChangedBlocks;
+private:
 	TWeakObjectPtr<UTerrainGenerationComponent> TerrainGenerationComponent;
 };

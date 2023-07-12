@@ -71,7 +71,7 @@ int32 UInventoryComponent::GetMaxStackSizeByItemType(EItemType ItemType) const
 	return CurItemData->NumericData.MaxStackSize;
 }
 
-EItemType UInventoryComponent::ConvertBlockTypeToItemType(EBlockType BlockType)
+EItemType UInventoryComponent::ConvertBlockTypeToItemType(EBlockType BlockType) const
 {
 	switch (BlockType)
 	{
@@ -83,7 +83,7 @@ EItemType UInventoryComponent::ConvertBlockTypeToItemType(EBlockType BlockType)
 	}
 }
 
-EBlockType UInventoryComponent::ConvertItemTypeToBlockType(EItemType ItemType)
+EBlockType UInventoryComponent::ConvertItemTypeToBlockType(EItemType ItemType) const
 {
 	switch(ItemType) {
 		case EItemType::Nothing: return EBlockType::Air;
@@ -222,6 +222,14 @@ int32 UInventoryComponent::RemoveHalfItemByIndex(int32 Index)
 	return AmountToRemove;
 }
 
+void UInventoryComponent::RemoveOneSelectItem()
+{
+	if(Inventory[CurSelectItemBarIndex]->Amount > 0)
+		--Inventory[CurSelectItemBarIndex]->Amount;
+	if(Inventory[CurSelectItemBarIndex]->Amount <= 0)
+		Inventory[CurSelectItemBarIndex]->ItemType = EItemType::Nothing;
+}
+
 void UInventoryComponent::SetItemByIndex(int32 Index, EItemType ItemType, int32 Amount)
 {
 	Inventory[Index]->ItemType = ItemType;
@@ -314,7 +322,7 @@ void UInventoryComponent::GetItemStack(EItemType ItemType, UPARAM(ref)int32& Cur
 
 void UInventoryComponent::ChangeCurSelectByIndex(int32 Index)
 {
-	if (Index < ItemBarSize && Index > 0 && Index != CurSelectItemBarIndex)
+	if (Index < ItemBarSize && Index >= 0 && Index != CurSelectItemBarIndex)
 	{
 		CurSelectItemBarIndex = Index;
 		SelectSlotIndexChanged.Broadcast();
