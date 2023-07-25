@@ -1,21 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Chunk.h"
-#include "ProceduralMeshComponent.h"
 #include "SimplexNoiseLibrary.h"
 #include "TerrainGenerationComponent.h"
 #include "MCSaveGameChunk.h"
+#include "thread"
+#include "mutex"
 #include "Kismet/GameplayStatics.h"
 
-struct FMeshData
-{
-	TArray<FVector> Vertices;
-	TArray<int32> Triangles;
-	TArray<FVector> Normals;
-	TArray<FVector2D> UV0;
-	TArray<FColor> VertexColors;
-	TArray<FProcMeshTangent> Tangents;
-};
+static std::mutex LoadChunkLock;
 
 //前面的面左下角为0，逆时针分别为0、1、2、3。从前面看后面的面，左上角为4，顺时针分别为4，5，6，7。
 const FVector EightVerticesInABlock[8]{
@@ -65,7 +58,7 @@ AChunk::AChunk()
 	FString String = "chunk";
 	FName Name = FName(*String);
 	ProceduralMeshComponent = NewObject<UProceduralMeshComponent>(this, Name);
-
+	MeshDataReady.BindUObject(this, &AChunk::ApplyMeshData);
 	RootComponent = ProceduralMeshComponent;
 }
 
@@ -130,8 +123,23 @@ TArray<int32> AChunk::CalculateNoise()
 	return Noises;
 }
 
+void AChunk::GetChangedBlocksBySaveFiles(TMap<int32, EBlockType>& Res)
+{
+	std::lock_guard<std::mutex> mm(LoadChunkLock);
+	FString CurSlotName = ChunkIndexInWorld.ToString();
+	if (UGameplayStatics::DoesSaveGameExist(CurSlotName, 0))
+	{
+		UMCSaveGameChunk* LoadedChunk = Cast<UMCSaveGameChunk>(UGameplayStatics::LoadGameFromSlot(CurSlotName, 0));
+		Res = LoadedChunk->ChangedBlocks;
+	}
+}
+
 void AChunk::GenerateChunk()
 {
+	//此处开个线程是否有点鸡肋？
+	std::thread GetChangedThread{&AChunk::GetChangedBlocksBySaveFiles,this, std::ref(ChangedBlocks)};
+	GetChangedThread.detach();
+	
 	Blocks.SetNum(ChunkZBlocks * (ChunkYBlocks + 2) * (ChunkXBlocks + 2));
 	//根据当前chunk所在位置计算得到simplex噪声值。noise大小为(chunkYBlocks + 2) * (chunkXBlocks + 2)，(x,y)对应索引为y + x * (chunkYBlocks+2)
 	TArray<int32> noise = CalculateNoise();
@@ -152,13 +160,9 @@ void AChunk::GenerateChunk()
 			}
 		}
 	}
-	FString CurSlotName = ChunkIndexInWorld.ToString();
-	if (UGameplayStatics::DoesSaveGameExist(CurSlotName, 0))
-	{
-		UMCSaveGameChunk* LoadedChunk = Cast<UMCSaveGameChunk>(UGameplayStatics::LoadGameFromSlot(CurSlotName, 0));
-		ChangedBlocks = LoadedChunk->ChangedBlocks;
-	}
 
+	//确保数据准备ok了
+	std::lock_guard<std::mutex> mm(LoadChunkLock);
 	//有可能该方块以前更改过，后面又改成原来的类型了，记录下来，从ChangedBlocks中删去。
 	TArray<int32> HasNotChangedIndex;
 	for (auto i : ChangedBlocks)
@@ -180,11 +184,9 @@ void AChunk::GenerateChunk()
 	}
 }
 
-void AChunk::UpdateMesh()
+void AChunk::PrepareMeshData()
 {
-	TMap<EBlockType, FMeshData> MeshDataMap;
-	//MeshData.SetNum(TerrainGenerationComponent->GetMaterialCount());
-
+	MeshDataMap.Empty();
 	//渲染的方块要去掉外面一圈其他chunk的方块。
 	for (int32 x = 1; x < ChunkXBlocks + 1; x++)
 	{
@@ -198,7 +200,6 @@ void AChunk::UpdateMesh()
 				if (CurBlockType == EBlockType::Air)
 					continue;
 				FMeshData& CurMeshData = MeshDataMap.FindOrAdd(CurBlockType);
-
 
 				TArray<FVector>& Vertices = CurMeshData.Vertices;
 				TArray<int32>& Triangles = CurMeshData.Triangles;
@@ -257,16 +258,17 @@ void AChunk::UpdateMesh()
 			}
 		}
 	}
+	//主线程中应用Mesh数据
+	AsyncTask(ENamedThreads::GameThread,[this]()
+	{
+		MeshDataReady.Execute();
+	});
+}
 
+void AChunk::ApplyMeshData()
+{
 	//需要吗？
 	ProceduralMeshComponent->ClearAllMeshSections();
-
-	// for(int i=0;i<MeshDataMap.Num();i++)
-	// {
-	// 	if(MeshDataMap[i].Vertices.Num()>0)
-	// 		ProceduralMeshComponent->CreateMeshSection(i, MeshDataMap[i].Vertices, MeshDataMap[i].Triangles, MeshDataMap[i].Normals, MeshDataMap[i].UV0, MeshDataMap[i].VertexColors, MeshDataMap[i].Tangents, bHasCollision);
-	// }
-
 
 	for (auto i : MeshDataMap)
 	{
@@ -277,8 +279,8 @@ void AChunk::UpdateMesh()
 		{
 			int32 CurBlockTypeInt = static_cast<int32>(CurBlockType);
 			ProceduralMeshComponent->CreateMeshSection(CurBlockTypeInt, CurMeshData.Vertices, CurMeshData.Triangles,
-			                                           CurMeshData.Normals, CurMeshData.UV0, CurMeshData.VertexColors,
-			                                           CurMeshData.Tangents, bHasCollision);
+													   CurMeshData.Normals, CurMeshData.UV0, CurMeshData.VertexColors,
+													   CurMeshData.Tangents, bHasCollision);
 			if (TerrainGenerationComponent != nullptr)
 			{
 				UMaterialInterface* CurBlockMaterial = TerrainGenerationComponent->GetMaterialByType(CurBlockType);
@@ -286,7 +288,14 @@ void AChunk::UpdateMesh()
 					ProceduralMeshComponent->SetMaterial(CurBlockTypeInt, CurBlockMaterial);
 			}
 		}
-	}
+	}	
+}
+
+void AChunk::UpdateMesh()
+{
+	//使用线程计算Mesh数据
+	std::thread PrepareMeshDataThread{&AChunk::PrepareMeshData, this};
+	PrepareMeshDataThread.detach();
 }
 
 FIntVector AChunk::GetBlockIndexInChunk(const FVector WorldPosition)
@@ -343,7 +352,7 @@ EBlockType AChunk::GetBlockType(FVector Position)
 
 void AChunk::SaveChunk()
 {
-	if(ChangedBlocks.Num() == 0)
+	if (ChangedBlocks.Num() == 0)
 		return;
 	FString CurSlotName = ChunkIndexInWorld.ToString();
 	UMCSaveGameChunk* CurSave = NewObject<UMCSaveGameChunk>();

@@ -2,9 +2,9 @@
 
 
 #include "TerrainGenerationComponent.h"
-
 #include "MCSaveGameChunk.h"
 #include "Kismet/GameplayStatics.h"
+
 
 // Sets default values for this component's properties
 UTerrainGenerationComponent::UTerrainGenerationComponent()
@@ -162,6 +162,7 @@ TArray<FBox2D> UTerrainGenerationComponent::GetExtentBox(FIntPoint PreBoxCenterI
 
 void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 {
+	UE_LOG(LogTemp,Warning,TEXT("Start"))
 	TArray<FBox2D> AddAreaIndex = GetExtentBox(PlayerChunkIndex - DxDy, DxDy, RenderRange);
 	TArray<FBox2D> RemoveAreaIndex = GetExtentBox(PlayerChunkIndex, FIntPoint(0,0) - DxDy, RenderRange);
 	TArray<FBox2D> AddCollisionAreaIndex = GetExtentBox(PlayerChunkIndex - DxDy, DxDy, 1);
@@ -210,7 +211,7 @@ void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 			}
 		}
 	}
-
+	
 	//为碰撞范围内的chunk添加碰撞
 	for(auto i:AddCollisionAreaIndex)
 	{
@@ -226,7 +227,7 @@ void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 			}
 		}
 	}
-
+	
 	//为碰撞范围外的chunk更新碰撞
 	for(auto i:RemoveCollisionAreaIndex)
 	{
@@ -241,7 +242,8 @@ void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 				}
 			}
 		}
-	}	
+	}
+	UE_LOG(LogTemp,Warning,TEXT("End"))
 }
 
 void UTerrainGenerationComponent::SaveTerrain()

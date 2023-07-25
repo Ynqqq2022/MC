@@ -4,13 +4,27 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ProceduralMeshComponent.h"
 #include "BlockDataStructs.h"
 #include "Chunk.generated.h"
 
 class UTerrainGenerationComponent;
 class UProceduralMeshComponent;
 
+//Mesh数据准备完毕时调用
+DECLARE_DELEGATE( FMeshDataReadyDelegate );
+
 /*TODO:使用数据表，将材质与类型关联，且能在蓝图上更改*/
+
+struct FMeshData
+{
+	TArray<FVector> Vertices;
+	TArray<int32> Triangles;
+	TArray<FVector> Normals;
+	TArray<FVector2D> UV0;
+	TArray<FColor> VertexColors;
+	TArray<FProcMeshTangent> Tangents;
+};
 
 UCLASS()
 class MC_API AChunk : public AActor
@@ -83,20 +97,34 @@ private:
 	inline int GetIndexInBlocksArray(int x, int y, int z){ return z + y * (ChunkZBlocks) + x * (ChunkYBlocks + 2) * ChunkZBlocks; }
 	
 	TArray<int32> CalculateNoise();
-	
+
+	void GetChangedBlocksBySaveFiles(TMap<int32, EBlockType>& Res);	
+
 	//生成Chunk，为每一方块确定类型。
 	void GenerateChunk();
 
+	//计算Mesh数据
+	void PrepareMeshData();
+
+	//将Mesh数据应用到程序化网格体上
+	void ApplyMeshData();
+	
 	//为每一方块生成渲染数据，提供给程序化网格体组件。
 	void UpdateMesh();
 
 public:
-	//UPROPERTY(VisibleAnywhere)
 	UPROPERTY()
 	//存储此chunk中每个方块的类型
 	TArray<EBlockType> Blocks;
 	//存储此chunk中被更改过的方块。
 	TMap<int32, EBlockType> ChangedBlocks;
+
+	//Mesh数据准备好了
+	FMeshDataReadyDelegate MeshDataReady;
+
 private:
 	TWeakObjectPtr<UTerrainGenerationComponent> TerrainGenerationComponent;
+
+	//Mesh数据
+	TMap<EBlockType, FMeshData> MeshDataMap;
 };
