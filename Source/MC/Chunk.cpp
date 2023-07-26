@@ -1,6 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Chunk.h"
+
+#include <future>
+
 #include "SimplexNoiseLibrary.h"
 #include "TerrainGenerationComponent.h"
 #include "MCSaveGameChunk.h"
@@ -8,7 +11,7 @@
 #include "mutex"
 #include "Kismet/GameplayStatics.h"
 
-static std::mutex LoadChunkLock;
+static std::mutex MeshDataLock;
 
 //前面的面左下角为0，逆时针分别为0、1、2、3。从前面看后面的面，左上角为4，顺时针分别为4，5，6，7。
 const FVector EightVerticesInABlock[8]{
@@ -67,7 +70,8 @@ void AChunk::BeginPlay()
 {
 	Super::BeginPlay();
 	GenerateChunk();
-	UpdateMesh();
+	AsyncUpdateMesh();
+	//UpdateMesh();
 }
 
 // Called every frame
@@ -92,7 +96,9 @@ void AChunk::UpdateCollision(bool Collision)
 	if (bHasCollision != Collision)
 	{
 		bHasCollision = Collision;
-		UpdateMesh();
+		//AsyncUpdateMesh();
+		ApplyMeshData();
+		
 	}
 }
 
@@ -123,22 +129,21 @@ TArray<int32> AChunk::CalculateNoise()
 	return Noises;
 }
 
-void AChunk::GetChangedBlocksBySaveFiles(TMap<int32, EBlockType>& Res)
+TMap<int32, EBlockType> AChunk::GetChangedBlocksBySaveFiles()
 {
-	std::lock_guard<std::mutex> mm(LoadChunkLock);
 	FString CurSlotName = ChunkIndexInWorld.ToString();
 	if (UGameplayStatics::DoesSaveGameExist(CurSlotName, 0))
 	{
 		UMCSaveGameChunk* LoadedChunk = Cast<UMCSaveGameChunk>(UGameplayStatics::LoadGameFromSlot(CurSlotName, 0));
-		Res = LoadedChunk->ChangedBlocks;
+		return LoadedChunk->ChangedBlocks;
 	}
+	return TMap<int32, EBlockType>();
 }
 
 void AChunk::GenerateChunk()
 {
 	//此处开个线程是否有点鸡肋？
-	std::thread GetChangedThread{&AChunk::GetChangedBlocksBySaveFiles,this, std::ref(ChangedBlocks)};
-	GetChangedThread.detach();
+	auto ChangedBlocksFuture = std::async(std::launch::async, &AChunk::GetChangedBlocksBySaveFiles,this);
 	
 	Blocks.SetNum(ChunkZBlocks * (ChunkYBlocks + 2) * (ChunkXBlocks + 2));
 	//根据当前chunk所在位置计算得到simplex噪声值。noise大小为(chunkYBlocks + 2) * (chunkXBlocks + 2)，(x,y)对应索引为y + x * (chunkYBlocks+2)
@@ -161,8 +166,7 @@ void AChunk::GenerateChunk()
 		}
 	}
 
-	//确保数据准备ok了
-	std::lock_guard<std::mutex> mm(LoadChunkLock);
+	ChangedBlocks = ChangedBlocksFuture.get();
 	//有可能该方块以前更改过，后面又改成原来的类型了，记录下来，从ChangedBlocks中删去。
 	TArray<int32> HasNotChangedIndex;
 	for (auto i : ChangedBlocks)
@@ -186,6 +190,7 @@ void AChunk::GenerateChunk()
 
 void AChunk::PrepareMeshData()
 {
+	std::lock_guard<std::mutex> mm(MeshDataLock);
 	MeshDataMap.Empty();
 	//渲染的方块要去掉外面一圈其他chunk的方块。
 	for (int32 x = 1; x < ChunkXBlocks + 1; x++)
@@ -258,15 +263,22 @@ void AChunk::PrepareMeshData()
 			}
 		}
 	}
+}
+
+void AChunk::AsyncPrepareMeshData()
+{
+	//UE_LOG(LogTemp,Warning,TEXT("Thread ID:%d"),FPlatformTLS::GetCurrentThreadId())
+	PrepareMeshData();
 	//主线程中应用Mesh数据
 	AsyncTask(ENamedThreads::GameThread,[this]()
 	{
-		MeshDataReady.Execute();
+		MeshDataReady.ExecuteIfBound();
 	});
 }
 
 void AChunk::ApplyMeshData()
 {
+	std::lock_guard<std::mutex> mm(MeshDataLock);
 	//需要吗？
 	ProceduralMeshComponent->ClearAllMeshSections();
 
@@ -293,9 +305,19 @@ void AChunk::ApplyMeshData()
 
 void AChunk::UpdateMesh()
 {
+	PrepareMeshData();
+	ApplyMeshData();
+}
+
+void AChunk::AsyncUpdateMesh()
+{
 	//使用线程计算Mesh数据
-	std::thread PrepareMeshDataThread{&AChunk::PrepareMeshData, this};
-	PrepareMeshDataThread.detach();
+	 AsyncTask(ENamedThreads::AnyThread,[this]()
+	 {
+	 	AsyncPrepareMeshData();
+	 });
+	// std::thread PrepareMeshDataThread{&AChunk::AsyncPrepareMeshData, this};
+	// PrepareMeshDataThread.detach();
 }
 
 FIntVector AChunk::GetBlockIndexInChunk(const FVector WorldPosition)
@@ -333,7 +355,8 @@ bool AChunk::SetBlock(FVector Position, EBlockType Type)
 	if (Index < 0 || Index > Blocks.Num()) return false;
 	Blocks[Index] = Type;
 	ChangedBlocks.Add(Index, Type);
-	UpdateMesh();
+	AsyncUpdateMesh();
+	//UpdateMesh();
 	return true;
 }
 
@@ -357,5 +380,5 @@ void AChunk::SaveChunk()
 	FString CurSlotName = ChunkIndexInWorld.ToString();
 	UMCSaveGameChunk* CurSave = NewObject<UMCSaveGameChunk>();
 	CurSave->ChangedBlocks = ChangedBlocks;
-	UGameplayStatics::SaveGameToSlot(CurSave, CurSlotName, 0);
+	UGameplayStatics::AsyncSaveGameToSlot(CurSave, CurSlotName, 0);
 }

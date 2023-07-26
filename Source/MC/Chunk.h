@@ -98,19 +98,22 @@ private:
 	
 	TArray<int32> CalculateNoise();
 
-	void GetChangedBlocksBySaveFiles(TMap<int32, EBlockType>& Res);	
+	TMap<int32, EBlockType>  GetChangedBlocksBySaveFiles();	
 
 	//生成Chunk，为每一方块确定类型。
 	void GenerateChunk();
 
 	//计算Mesh数据
 	void PrepareMeshData();
+	void AsyncPrepareMeshData();
 
 	//将Mesh数据应用到程序化网格体上
 	void ApplyMeshData();
-	
-	//为每一方块生成渲染数据，提供给程序化网格体组件。
+
+	//更新Mesh数据，提交给程序化网格体组件
 	void UpdateMesh();
+	//使用多线程异步更新
+	void AsyncUpdateMesh();
 
 public:
 	UPROPERTY()

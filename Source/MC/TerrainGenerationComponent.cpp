@@ -107,7 +107,7 @@ void UTerrainGenerationComponent::GenerateChunks()
 
 			if(Chunks.Contains(ChunkIndexInWorld))
 			{
-				//若chunk已存在，则根据hasCollision更新是否创建碰撞。
+				//若chunk已存在，则根据hasCollision更新是否创建碰撞。AsyncTask
 				Chunks[ChunkIndexInWorld]->UpdateCollision(bHasCollision);
 			}
 			else
@@ -162,7 +162,6 @@ TArray<FBox2D> UTerrainGenerationComponent::GetExtentBox(FIntPoint PreBoxCenterI
 
 void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 {
-	UE_LOG(LogTemp,Warning,TEXT("Start"))
 	TArray<FBox2D> AddAreaIndex = GetExtentBox(PlayerChunkIndex - DxDy, DxDy, RenderRange);
 	TArray<FBox2D> RemoveAreaIndex = GetExtentBox(PlayerChunkIndex, FIntPoint(0,0) - DxDy, RenderRange);
 	TArray<FBox2D> AddCollisionAreaIndex = GetExtentBox(PlayerChunkIndex - DxDy, DxDy, 1);
@@ -243,7 +242,6 @@ void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 			}
 		}
 	}
-	UE_LOG(LogTemp,Warning,TEXT("End"))
 }
 
 void UTerrainGenerationComponent::SaveTerrain()
