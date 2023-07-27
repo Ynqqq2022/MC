@@ -63,6 +63,8 @@ public:
 	EBlockType GetBlockType(FVector Position);
 
 	UFUNCTION()
+	void AsyncSaveChunk();
+	UFUNCTION()
 	void SaveChunk();
 	//TODO: 实例化网格体快还是程序化网格体快？
 	UPROPERTY(VisibleAnywhere)

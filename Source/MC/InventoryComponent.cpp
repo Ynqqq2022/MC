@@ -2,7 +2,6 @@
 
 #include "InventoryComponent.h"
 
-#include "Chaos/Pair.h"
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()

@@ -5,7 +5,6 @@
 #include "MCSaveGameChunk.h"
 #include "Kismet/GameplayStatics.h"
 
-
 // Sets default values for this component's properties
 UTerrainGenerationComponent::UTerrainGenerationComponent()
 {
@@ -33,20 +32,18 @@ void UTerrainGenerationComponent::InitializeComponent()
 			}
 		}
 	}
+
 }
 
 // Called when the game starts
 void UTerrainGenerationComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	//TODO: 有更好的加载数据时机？
-
+	
 	UpdatePlayerChunkIndex();
 	GenerateChunks();
-	// ...
+	TerrianGenDone.Broadcast();
 }
-
 
 // Called every frame
 void UTerrainGenerationComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -208,7 +205,7 @@ void UTerrainGenerationComponent::UpdateChunks(FIntPoint DxDy)
 				const FIntPoint ChunkIndexInWorld =  FIntPoint{x, y};
 				if(Chunks.Contains(ChunkIndexInWorld))
 				{
-					Chunks[ChunkIndexInWorld]->SaveChunk();
+					Chunks[ChunkIndexInWorld]->AsyncSaveChunk();
 					Chunks[ChunkIndexInWorld]->Destroy();
 					Chunks.Remove(ChunkIndexInWorld);
 				}

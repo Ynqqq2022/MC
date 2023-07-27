@@ -9,7 +9,8 @@
 
 
 class AChunk;
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTerrianGenStart);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTerrianGenDone);
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MC_API UTerrainGenerationComponent : public UActorComponent
 {
@@ -28,6 +29,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSubclassOf<AChunk> ChunkClass;
 
+	UPROPERTY(BlueprintAssignable)
+	FTerrianGenDone TerrianGenDone;
+	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 	//更新玩家所在区块的世界索引，返回世界索引的dx,dy。

@@ -373,7 +373,7 @@ EBlockType AChunk::GetBlockType(FVector Position)
 	return Blocks[Index];
 }
 
-void AChunk::SaveChunk()
+void AChunk::AsyncSaveChunk()
 {
 	if (ChangedBlocks.Num() == 0)
 		return;
@@ -381,4 +381,14 @@ void AChunk::SaveChunk()
 	UMCSaveGameChunk* CurSave = NewObject<UMCSaveGameChunk>();
 	CurSave->ChangedBlocks = ChangedBlocks;
 	UGameplayStatics::AsyncSaveGameToSlot(CurSave, CurSlotName, 0);
+}
+
+void AChunk::SaveChunk()
+{
+	if (ChangedBlocks.Num() == 0)
+		return;
+	FString CurSlotName = ChunkIndexInWorld.ToString();
+	UMCSaveGameChunk* CurSave = NewObject<UMCSaveGameChunk>();
+	CurSave->ChangedBlocks = ChangedBlocks;
+	UGameplayStatics::SaveGameToSlot(CurSave, CurSlotName, 0);
 }

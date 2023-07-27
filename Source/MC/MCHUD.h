@@ -26,7 +26,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> GameMenuClass;
-	
+
 	UFUNCTION(BlueprintCallable)
 	void ShowInventory() const;
 	UFUNCTION(BlueprintCallable)
@@ -39,7 +39,9 @@ public:
 	void ToggleInventoryPanel() ;
 	UFUNCTION(BlueprintCallable)
 	void ShowGameMenu() const;
+	UFUNCTION(BlueprintCallable)
 	void HideGameMenu()const;
+	
 protected:
 	virtual void BeginPlay() override;
 
@@ -55,6 +57,7 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	UUserWidget* GameMenuWidget;
+
 private:
 	bool bShowInventoryPanel;
 };
