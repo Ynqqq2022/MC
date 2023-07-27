@@ -10,19 +10,26 @@ UInventoryComponent::UInventoryComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
+	//想调用InitializeComponent
+	bWantsInitializeComponent = true;
 	// ...
 }
 
-// Called when the game starts
-void UInventoryComponent::BeginPlay()
+void UInventoryComponent::InitializeComponent()
 {
-	Super::BeginPlay();
+	//初始化放在BeginPlay里，太晚了，会导致还未初始化就被访问了。。。也不能放构造里，不然NewObject返回nullptr。
 	for (int32 i = 0; i < ItemBarSize + InventorySize; i++)
 	{
 		Inventory.Add(NewObject<UItemBase>());
 		InventoryBackUp.Add(NewObject<UItemBase>());
-	}
+	}	
+	Super::InitializeComponent();
+}
+
+// Called when the game starts
+void UInventoryComponent::BeginPlay()
+{		
+	Super::BeginPlay();
 
 	if (ItemDataTable)
 	{
@@ -41,7 +48,7 @@ void UInventoryComponent::BeginPlay()
 	AutoAddItemToInventory(EItemType::Stone, 64 * 3);
 
 	//此时character未初始化好？响应不了这个事件？
-	//SendInventoryChangedMessage();
+	SendInventoryChangedMessage();
 	// ...
 }
 

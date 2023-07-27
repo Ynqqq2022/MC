@@ -4,6 +4,7 @@
 #include "MCHUD.h"
 
 #include "Blueprint/UserWidget.h"
+#include "Kismet/GameplayStatics.h"
 
 void AMCHUD::BeginPlay()
 {
@@ -30,8 +31,14 @@ void AMCHUD::BeginPlay()
 		ItemBarWidget->AddToViewport(-1);
 		ItemBarWidget->SetVisibility(ESlateVisibility::Visible);
 	}
-}
 
+	if(GameMenuClass)
+	{
+		GameMenuWidget = CreateWidget<UUserWidget>(GetWorld(), GameMenuClass);
+		GameMenuWidget->AddToViewport(-1);
+		GameMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
 
 void AMCHUD::ShowInventory() const
 {
@@ -86,4 +93,31 @@ void AMCHUD::ToggleInventoryPanel()
 		HideItemBar();
 	}
 	bShowInventoryPanel = !bShowInventoryPanel;
+}
+
+void AMCHUD::ShowGameMenu() const
+{
+	if(GameMenuWidget)
+	{
+		GameMenuWidget->SetVisibility(ESlateVisibility::Visible);
+		const FInputModeUIOnly InputMode;
+		
+		GetOwningPlayerController()->SetInputMode(InputMode);
+		GetOwningPlayerController()->SetShowMouseCursor(true);
+		GameMenuWidget->bIsFocusable = true;
+		GameMenuWidget->SetFocus();
+		UGameplayStatics::SetGamePaused(GetWorld(),true);
+	}
+}
+
+void AMCHUD::HideGameMenu() const
+{
+	if(GameMenuWidget)
+	{
+		GameMenuWidget->SetVisibility(ESlateVisibility::Collapsed);
+		const FInputModeGameOnly InputMode;
+		GetOwningPlayerController()->SetInputMode(InputMode);
+		GetOwningPlayerController()->SetShowMouseCursor(false);
+		UGameplayStatics::SetGamePaused(GetWorld(),false);
+	}	
 }

@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "IDetailTreeNode.h"
 #include "Components/ActorComponent.h"
 #include "ItemBase.h"
 #include"BlockDataStructs.h"
@@ -22,6 +21,7 @@ public:
 	// Sets default values for this component's properties
 	UInventoryComponent();
 	
+	virtual void InitializeComponent() override;
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -161,4 +161,5 @@ private:
 
 	//检测选择的物品种类是否变了，变了则发送该消息。
 	void SendSelectItemChangeMessage();
+
 };

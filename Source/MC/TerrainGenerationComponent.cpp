@@ -12,17 +12,14 @@ UTerrainGenerationComponent::UTerrainGenerationComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-	
+	//想调用InitializeComponent
+	bWantsInitializeComponent = true;	
 	// ...
 }
 
-
-// Called when the game starts
-void UTerrainGenerationComponent::BeginPlay()
+void UTerrainGenerationComponent::InitializeComponent()
 {
-	Super::BeginPlay();
-
-	//TODO: 有更好的加载数据时机？
+	Super::InitializeComponent();
 	//从数据表加载方块材质
 	if (BlockDataTable)
 	{
@@ -36,6 +33,14 @@ void UTerrainGenerationComponent::BeginPlay()
 			}
 		}
 	}
+}
+
+// Called when the game starts
+void UTerrainGenerationComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	//TODO: 有更好的加载数据时机？
 
 	UpdatePlayerChunkIndex();
 	GenerateChunks();

@@ -18,14 +18,14 @@ class MC_API UTerrainGenerationComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UTerrainGenerationComponent();
-
+	virtual void InitializeComponent() override;
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
 public:
 	//提供蓝图选择chunk类的机会
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	TSubclassOf<AChunk> ChunkClass;
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -72,13 +72,14 @@ private:
 	  参数为被更改的方块的位置、改为了什么类型。*/
 	void UpdateEdgeBlocks(FVector changedBlockLocation, EBlockType type);
 
+private:
 	UPROPERTY(VisibleAnywhere)
 	//存储世界中所有的chunk
 	//TArray<AChunk*> Chunks;
 	TMap<FIntPoint,AChunk*> Chunks;
 
 	//block数据表
-	UPROPERTY(EditAnywhere,meta=(RequiredAssetDataTags = "RowStructure=BlockData"))
+	UPROPERTY(EditDefaultsOnly,meta=(RequiredAssetDataTags = "RowStructure=BlockData"))
 	UDataTable* BlockDataTable;
 
 	//存储从数据表中加载的方块材质

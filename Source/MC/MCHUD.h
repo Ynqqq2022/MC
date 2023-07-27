@@ -23,6 +23,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UUserWidget> ItemBarClass;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UUserWidget> GameMenuClass;
 	
 	UFUNCTION(BlueprintCallable)
 	void ShowInventory() const;
@@ -34,6 +37,9 @@ public:
 	void HideItemBar() const;
 	UFUNCTION(BlueprintCallable)
 	void ToggleInventoryPanel() ;
+	UFUNCTION(BlueprintCallable)
+	void ShowGameMenu() const;
+	void HideGameMenu()const;
 protected:
 	virtual void BeginPlay() override;
 
@@ -47,6 +53,8 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	UUserWidget* ItemBarWidget;
 
+	UPROPERTY(BlueprintReadOnly)
+	UUserWidget* GameMenuWidget;
 private:
 	bool bShowInventoryPanel;
 };
