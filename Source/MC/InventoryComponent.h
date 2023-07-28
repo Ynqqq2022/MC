@@ -57,11 +57,11 @@ public:
 
 	//背包栏,前ItemBarSize个元素为手持栏中物品，后InventorySize个元素为背包栏中物品。
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	TArray<UItemBase*> Inventory;
+	TArray<FItemBase> Inventory;
 
 	//备份数据，方便用于动态分配物品。
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
-	TArray<UItemBase*> InventoryBackUp;
+	TArray<FItemBase> InventoryBackUp;
 	
 	UFUNCTION(BlueprintCallable)
 	FItemAssetData GetAssetDataByItemType( EItemType ItemType) const;
@@ -133,11 +133,11 @@ public:
 
 	//返回当前选择的物品的种类。
 	UFUNCTION(BlueprintCallable)
-	EItemType GetCurSelectItemType()const{return Inventory[CurSelectItemBarIndex]->ItemType;}
+	EItemType GetCurSelectItemType()const{return Inventory[CurSelectItemBarIndex].ItemType;}
 
 	//返回当前选择的物品的种类对应的BlockType,不是方块则返回EBlockType::Air。
 	UFUNCTION(BlueprintCallable)
-	EBlockType GetCurSelectBlockType()const{return ConvertItemTypeToBlockType(Inventory[CurSelectItemBarIndex]->ItemType);}
+	EBlockType GetCurSelectBlockType()const{return ConvertItemTypeToBlockType(Inventory[CurSelectItemBarIndex].ItemType);}
 	
 	//设置当前选中的物品
 	UFUNCTION(BlueprintCallable)

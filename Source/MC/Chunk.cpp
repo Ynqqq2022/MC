@@ -11,6 +11,7 @@
 #include "mutex"
 #include "Kismet/GameplayStatics.h"
 
+//保护MeshDataMap的锁
 static std::mutex MeshDataLock;
 
 //前面的面左下角为0，逆时针分别为0、1、2、3。从前面看后面的面，左上角为4，顺时针分别为4，5，6，7。
@@ -71,7 +72,6 @@ void AChunk::BeginPlay()
 	Super::BeginPlay();
 	GenerateChunk();
 	AsyncUpdateMesh();
-	//UpdateMesh();
 }
 
 // Called every frame
@@ -88,7 +88,6 @@ void AChunk::OnConstruction(const FTransform& Transform)
 	{
 		TerrainGenerationComponent = PlayerController->FindComponentByClass<UTerrainGenerationComponent>();
 	}
-	//UE_LOG(LogTemp,Warning,TEXT("=====================================================================%s"),*Transform.GetLocation().ToString());
 }
 
 void AChunk::UpdateCollision(bool Collision)
@@ -98,7 +97,6 @@ void AChunk::UpdateCollision(bool Collision)
 		bHasCollision = Collision;
 		//AsyncUpdateMesh();
 		ApplyMeshData();
-		
 	}
 }
 
@@ -276,6 +274,7 @@ void AChunk::AsyncPrepareMeshData()
 	});
 }
 
+//只能在GameThread执行
 void AChunk::ApplyMeshData()
 {
 	std::lock_guard<std::mutex> mm(MeshDataLock);

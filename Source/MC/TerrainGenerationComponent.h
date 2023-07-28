@@ -26,11 +26,15 @@ protected:
 
 public:
 	//提供蓝图选择chunk类的机会
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<AChunk> ChunkClass;
 
 	UPROPERTY(BlueprintAssignable)
 	FTerrianGenDone TerrianGenDone;
+	
+	//玩家当前所在的区块，以区块为单位
+	UPROPERTY(VisibleInstanceOnly)
+	FIntPoint PlayerChunkIndex;
 	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
@@ -83,17 +87,13 @@ private:
 	TMap<FIntPoint,AChunk*> Chunks;
 
 	//block数据表
-	UPROPERTY(EditDefaultsOnly,meta=(RequiredAssetDataTags = "RowStructure=BlockData"))
+	UPROPERTY(EditAnywhere,meta=(RequiredAssetDataTags = "RowStructure=BlockData"))
 	UDataTable* BlockDataTable;
 
 	//存储从数据表中加载的方块材质
 	UPROPERTY(EditAnywhere)
 	TMap<EBlockType,UMaterialInterface*> Materials;
 	
-	//玩家当前所在的区块，以区块为单位
-	UPROPERTY(VisibleInstanceOnly)
-	FIntPoint PlayerChunkIndex;
-
 	//方块大小
 	UPROPERTY(EditAnywhere)
 	int32 BlockSize = 100;

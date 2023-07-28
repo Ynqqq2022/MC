@@ -78,16 +78,26 @@ struct FItemData : public FTableRowBase
 	FItemAssetData AssetData;
 };
 
-UCLASS(BlueprintType)
-class MC_API UItemBase : public UObject
+// UCLASS(BlueprintType)
+// class MC_API UItemBase : public UObject
+// {
+// 	GENERATED_BODY()
+// public:
+// 	//UItemBase(){ItemType = EItemType::Nothing; Amount = 0;}
+// 	UPROPERTY(BlueprintReadOnly)
+// 	EItemType ItemType;
+// 	UPROPERTY(BlueprintReadOnly)
+// 	int32 Amount;
+// };
+
+USTRUCT(BlueprintType)
+struct FItemBase
 {
 	GENERATED_BODY()
 
-public:
-	UItemBase(){ItemType = EItemType::Nothing; Amount = 0;}
+	FItemBase(){ItemType = EItemType::Nothing; Amount = 0;}
 	UPROPERTY(BlueprintReadOnly)
 	EItemType ItemType;
 	UPROPERTY(BlueprintReadOnly)
 	int32 Amount;
 };
-

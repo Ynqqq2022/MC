@@ -2,6 +2,9 @@
 
 #include "InventoryComponent.h"
 
+#include "MCPlayerController.h"
+#include "Kismet/GameplayStatics.h"
+
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
@@ -19,15 +22,15 @@ void UInventoryComponent::InitializeComponent()
 	//初始化放在BeginPlay里，太晚了，会导致还未初始化就被访问了。。。也不能放构造里，不然NewObject返回nullptr。
 	for (int32 i = 0; i < ItemBarSize + InventorySize; i++)
 	{
-		Inventory.Add(NewObject<UItemBase>());
-		InventoryBackUp.Add(NewObject<UItemBase>());
-	}	
+		Inventory.Add(FItemBase{});
+		InventoryBackUp.Add(FItemBase{});
+	}
 	Super::InitializeComponent();
 }
 
 // Called when the game starts
 void UInventoryComponent::BeginPlay()
-{		
+{
 	Super::BeginPlay();
 
 	if (ItemDataTable)
@@ -42,9 +45,18 @@ void UInventoryComponent::BeginPlay()
 			}
 		}
 	}
-	AutoAddItemToInventory(EItemType::Grass, 64 * 3);
-	AutoAddItemToInventory(EItemType::Soil, 64 * 3);
-	AutoAddItemToInventory(EItemType::Stone, 64 * 3);
+
+	//从玩家控制器获取加载好的存档数据
+	auto MCPlayerController = Cast<AMCPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(),0));
+	if(MCPlayerController->PlayerData)
+	{
+		CurSelectItemBarIndex = MCPlayerController->PlayerData->CurSelectItemBarIndex;
+		Inventory = MCPlayerController->PlayerData->Inventory;
+	}
+	
+	// AutoAddItemToInventory(EItemType::Grass, 64 * 3);
+	// AutoAddItemToInventory(EItemType::Soil, 64 * 3);
+	// AutoAddItemToInventory(EItemType::Stone, 64 * 3);
 
 	//此时character未初始化好？响应不了这个事件？
 	SendInventoryChangedMessage();
@@ -67,7 +79,7 @@ FItemAssetData UInventoryComponent::GetAssetDataByItemType(EItemType ItemType) c
 
 FItemAssetData UInventoryComponent::GetSelectItemAssetData() const
 {
-	const FItemData* CurItemData = ItemData.Find(Inventory[CurSelectItemBarIndex]->ItemType);
+	const FItemData* CurItemData = ItemData.Find(Inventory[CurSelectItemBarIndex].ItemType);
 	return CurItemData ? CurItemData->AssetData : FItemAssetData();
 }
 
@@ -91,12 +103,14 @@ EItemType UInventoryComponent::ConvertBlockTypeToItemType(EBlockType BlockType) 
 
 EBlockType UInventoryComponent::ConvertItemTypeToBlockType(EItemType ItemType) const
 {
-	switch(ItemType) {
-		case EItemType::Nothing: return EBlockType::Air;
-		case EItemType::Grass: return EBlockType::Grass;
-		case EItemType::Stone: return EBlockType::Stone;
-		case EItemType::Soil: return EBlockType::Soil;
-		default:return EBlockType::Air; }
+	switch (ItemType)
+	{
+	case EItemType::Nothing: return EBlockType::Air;
+	case EItemType::Grass: return EBlockType::Grass;
+	case EItemType::Stone: return EBlockType::Stone;
+	case EItemType::Soil: return EBlockType::Soil;
+	default: return EBlockType::Air;
+	}
 }
 
 int32 UInventoryComponent::AutoAddItemToInventory(EItemType ItemType, int32 Amount)
@@ -109,14 +123,14 @@ int32 UInventoryComponent::AutoAddItemToInventory(EItemType ItemType, int32 Amou
 	 */
 	int32 CurItemMaxSize = GetMaxStackSizeByItemType(ItemType);
 
-	auto SameKindPred = [ItemType, CurItemMaxSize](const UItemBase* Ele)
+	auto SameKindPred = [ItemType, CurItemMaxSize](const FItemBase Ele)
 	{
-		return Ele->ItemType == ItemType && Ele->Amount < CurItemMaxSize;
+		return Ele.ItemType == ItemType && Ele.Amount < CurItemMaxSize;
 	};
 
-	auto EmptySlotPred = [](const UItemBase* Ele)
+	auto EmptySlotPred = [](const FItemBase Ele)
 	{
-		return Ele->ItemType == EItemType::Nothing;
+		return Ele.ItemType == EItemType::Nothing;
 	};
 
 	//先在手持栏中找是否存有同类物品，有的话叠加。
@@ -160,12 +174,12 @@ int32 UInventoryComponent::AutoAddItemToInventory(EItemType ItemType, int32 Amou
 void UInventoryComponent::AddItemToInventoryByIndex(int32 Index, UPARAM(ref)EItemType ItemType,
                                                     UPARAM(ref)int32& Amount)
 {
-	UItemBase* TempItemBase = Inventory[Index];
-	if (TempItemBase->ItemType == EItemType::Nothing || TempItemBase->ItemType == ItemType)
+	FItemBase& TempItemBase = Inventory[Index];
+	if (TempItemBase.ItemType == EItemType::Nothing || TempItemBase.ItemType == ItemType)
 	{
-		int32 LeftAmount = GetLeftItemAmount(ItemType, Amount, TempItemBase->Amount);
-		Swap(TempItemBase->ItemType, ItemType);
-		TempItemBase->Amount += Amount - LeftAmount;
+		int32 LeftAmount = GetLeftItemAmount(ItemType, Amount, TempItemBase.Amount);
+		Swap(TempItemBase.ItemType, ItemType);
+		TempItemBase.Amount += Amount - LeftAmount;
 		Amount = LeftAmount;
 		if (Amount == 0)
 		{
@@ -177,15 +191,15 @@ void UInventoryComponent::AddItemToInventoryByIndex(int32 Index, UPARAM(ref)EIte
 void UInventoryComponent::SplitSingleItemToInventoryByIndex(int32 Index, UPARAM(ref)EItemType ItemType,
                                                             UPARAM(ref)int32& Amount)
 {
-	UItemBase* TempItemBase = Inventory[Index];
-	if (Amount >= 1 && (TempItemBase->ItemType == EItemType::Nothing || TempItemBase->ItemType == ItemType))
+	FItemBase& TempItemBase = Inventory[Index];
+	if (Amount >= 1 && (TempItemBase.ItemType == EItemType::Nothing || TempItemBase.ItemType == ItemType))
 	{
-		int32 LeftAmount = GetLeftItemAmount(ItemType, 1, TempItemBase->Amount);
+		int32 LeftAmount = GetLeftItemAmount(ItemType, 1, TempItemBase.Amount);
 		if (LeftAmount == 0)
 		{
 			--Amount;
-			++TempItemBase->Amount;
-			TempItemBase->ItemType = ItemType;
+			++TempItemBase.Amount;
+			TempItemBase.ItemType = ItemType;
 		}
 		if (Amount <= 0)
 		{
@@ -196,9 +210,9 @@ void UInventoryComponent::SplitSingleItemToInventoryByIndex(int32 Index, UPARAM(
 
 void UInventoryComponent::SwapItemByIndex(int32 Index, UPARAM(ref)EItemType& ItemType, UPARAM(ref)int32& Amount)
 {
-	UItemBase* TempItemBase = Inventory[Index];
-	Swap(ItemType, TempItemBase->ItemType);
-	Swap(Amount, TempItemBase->Amount);
+	FItemBase &TempItemBase = Inventory[Index];
+	Swap(ItemType, TempItemBase.ItemType);
+	Swap(Amount, TempItemBase.Amount);
 }
 
 int32 UInventoryComponent::GetLeftItemAmount(EItemType ItemType, int32 SourceAmount, int32 TargetAmount)
@@ -211,53 +225,53 @@ int32 UInventoryComponent::GetLeftItemAmount(EItemType ItemType, int32 SourceAmo
 
 int32 UInventoryComponent::RemoveItemByIndex(int32 Index)
 {
-	int32 AmountToRemove = Inventory[Index]->Amount;
-	Inventory[Index]->ItemType = EItemType::Nothing;
-	Inventory[Index]->Amount = 0;
+	int32 AmountToRemove = Inventory[Index].Amount;
+	Inventory[Index].ItemType = EItemType::Nothing;
+	Inventory[Index].Amount = 0;
 	return AmountToRemove;
 }
 
 int32 UInventoryComponent::RemoveHalfItemByIndex(int32 Index)
 {
-	int32& SlotItemAmount = Inventory[Index]->Amount;
+	int32& SlotItemAmount = Inventory[Index].Amount;
 
 	int32 AmountToRemove = SlotItemAmount == 1 ? 1 : SlotItemAmount / 2;
 	SlotItemAmount -= AmountToRemove;
 	if (SlotItemAmount == 0)
-		Inventory[Index]->ItemType = EItemType::Nothing;
+		Inventory[Index].ItemType = EItemType::Nothing;
 	return AmountToRemove;
 }
 
 void UInventoryComponent::RemoveOneSelectItem()
 {
-	if(Inventory[CurSelectItemBarIndex]->Amount > 0)
-		--Inventory[CurSelectItemBarIndex]->Amount;
-	if(Inventory[CurSelectItemBarIndex]->Amount <= 0)
-		Inventory[CurSelectItemBarIndex]->ItemType = EItemType::Nothing;
+	if (Inventory[CurSelectItemBarIndex].Amount > 0)
+		--Inventory[CurSelectItemBarIndex].Amount;
+	if (Inventory[CurSelectItemBarIndex].Amount <= 0)
+		Inventory[CurSelectItemBarIndex].ItemType = EItemType::Nothing;
 }
 
 void UInventoryComponent::SetItemByIndex(int32 Index, EItemType ItemType, int32 Amount)
 {
-	Inventory[Index]->ItemType = ItemType;
-	Inventory[Index]->Amount = Amount;
+	Inventory[Index].ItemType = ItemType;
+	Inventory[Index].Amount = Amount;
 }
 
 int32 UInventoryComponent::CanAddItem(int32 Index, EItemType ItemType, int32 Amount)
 {
 	int32 CurMaxSize = GetMaxStackSizeByItemType(ItemType);
-	if (Inventory[Index]->ItemType == EItemType::Nothing)
+	if (Inventory[Index].ItemType == EItemType::Nothing)
 		return Amount;
-	if (Inventory[Index]->ItemType != ItemType)
+	if (Inventory[Index].ItemType != ItemType)
 		return 0;
-	return Amount <= CurMaxSize - Inventory[Index]->Amount ? Amount : CurMaxSize - Inventory[Index]->Amount;
+	return Amount <= CurMaxSize - Inventory[Index].Amount ? Amount : CurMaxSize - Inventory[Index].Amount;
 }
 
 void UInventoryComponent::BackUp()
 {
 	for (int i = 0; i < Inventory.Num(); i++)
 	{
-		InventoryBackUp[i]->Amount = Inventory[i]->Amount;
-		InventoryBackUp[i]->ItemType = Inventory[i]->ItemType;
+		InventoryBackUp[i].Amount = Inventory[i].Amount;
+		InventoryBackUp[i].ItemType = Inventory[i].ItemType;
 	}
 }
 
@@ -276,8 +290,8 @@ int32 UInventoryComponent::AutoDiv(EItemType ItemType, int32 TotalAmount, TArray
 		return TotalAmount;
 	if (TotalAmount == 1)
 	{
-		Inventory[CanPlaceSlotsIndices[0]]->Amount = InventoryBackUp[CanPlaceSlotsIndices[0]]->Amount + 1;
-		Inventory[CanPlaceSlotsIndices[0]]->ItemType = ItemType;
+		Inventory[CanPlaceSlotsIndices[0]].Amount = InventoryBackUp[CanPlaceSlotsIndices[0]].Amount + 1;
+		Inventory[CanPlaceSlotsIndices[0]].ItemType = ItemType;
 		return 0;
 	}
 	int32 TotalActualPlacedItems = 0;
@@ -287,9 +301,9 @@ int32 UInventoryComponent::AutoDiv(EItemType ItemType, int32 TotalAmount, TArray
 	{
 		for (auto i : CanPlaceSlotsIndices)
 		{
-			int32 Left = GetLeftItemAmount(ItemType, AmountPerSlot, InventoryBackUp[i]->Amount);
-			Inventory[i]->Amount = InventoryBackUp[i]->Amount + AmountPerSlot - Left;
-			Inventory[i]->ItemType = ItemType;
+			int32 Left = GetLeftItemAmount(ItemType, AmountPerSlot, InventoryBackUp[i].Amount);
+			Inventory[i].Amount = InventoryBackUp[i].Amount + AmountPerSlot - Left;
+			Inventory[i].ItemType = ItemType;
 			TotalActualPlacedItems += AmountPerSlot - Left;
 		}
 		return TotalAmount - TotalActualPlacedItems;
@@ -302,9 +316,9 @@ void UInventoryComponent::GetItemStack(EItemType ItemType, UPARAM(ref)int32& Cur
 	TArray<TPair<int32, int32>> ThisKindSlotIndices;
 	for (int i = 0; i < InventorySize + ItemBarSize; i++)
 	{
-		if (Inventory[i]->ItemType == ItemType)
+		if (Inventory[i].ItemType == ItemType)
 		{
-			ThisKindSlotIndices.Add(TPair<int32, int32>(i, Inventory[i]->Amount));
+			ThisKindSlotIndices.Add(TPair<int32, int32>(i, Inventory[i].Amount));
 		}
 	}
 
@@ -317,11 +331,11 @@ void UInventoryComponent::GetItemStack(EItemType ItemType, UPARAM(ref)int32& Cur
 	for (auto i : ThisKindSlotIndices)
 	{
 		int32 LeftAmount = GetLeftItemAmount(ItemType, i.Get<1>(), CurAmount);
-		CurAmount += Inventory[i.Get<0>()]->Amount - LeftAmount;
-		Inventory[i.Get<0>()]->Amount = LeftAmount;
+		CurAmount += Inventory[i.Get<0>()].Amount - LeftAmount;
+		Inventory[i.Get<0>()].Amount = LeftAmount;
 		if (LeftAmount == 0)
 		{
-			Inventory[i.Get<0>()]->ItemType = EItemType::Nothing;
+			Inventory[i.Get<0>()].ItemType = EItemType::Nothing;
 		}
 	}
 }
@@ -332,7 +346,7 @@ void UInventoryComponent::ChangeCurSelectByIndex(int32 Index)
 	{
 		CurSelectItemBarIndex = Index;
 		SelectSlotIndexChanged.Broadcast();
-		SendSelectItemChangeMessage();	
+		SendSelectItemChangeMessage();
 	}
 }
 
@@ -340,29 +354,29 @@ void UInventoryComponent::ChangeCurSelectForward()
 {
 	CurSelectItemBarIndex = (CurSelectItemBarIndex + 1) % ItemBarSize;
 	SelectSlotIndexChanged.Broadcast();
-	SendSelectItemChangeMessage();	
+	SendSelectItemChangeMessage();
 }
 
 void UInventoryComponent::ChangeCurSelectBackward()
 {
 	--CurSelectItemBarIndex;
-	if(CurSelectItemBarIndex < 0)
+	if (CurSelectItemBarIndex < 0)
 		CurSelectItemBarIndex = ItemBarSize - 1;
 	SelectSlotIndexChanged.Broadcast();
-	SendSelectItemChangeMessage();	
+	SendSelectItemChangeMessage();
 }
 
 void UInventoryComponent::SendInventoryChangedMessage()
 {
 	InventoryChanged.Broadcast();
-	SendSelectItemChangeMessage();	
+	SendSelectItemChangeMessage();
 }
 
 void UInventoryComponent::SendSelectItemChangeMessage()
 {
-	if(PreSelectItemType != Inventory[CurSelectItemBarIndex]->ItemType)
+	if (PreSelectItemType != Inventory[CurSelectItemBarIndex].ItemType)
 	{
-		PreSelectItemType = Inventory[CurSelectItemBarIndex]->ItemType;
+		PreSelectItemType = Inventory[CurSelectItemBarIndex].ItemType;
 		SelectItemTypeChanged.Broadcast();
 	}
 }

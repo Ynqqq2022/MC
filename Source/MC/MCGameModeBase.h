@@ -13,5 +13,4 @@ UCLASS()
 class MC_API AMCGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
-	
 };

@@ -2,6 +2,8 @@
 
 
 #include "TerrainGenerationComponent.h"
+
+#include "MCPlayerController.h"
 #include "MCSaveGameChunk.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -39,8 +41,14 @@ void UTerrainGenerationComponent::InitializeComponent()
 void UTerrainGenerationComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	UpdatePlayerChunkIndex();
+
+	//从存档中恢复ChunkIndex
+	auto MCPlayerController = Cast<AMCPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(),0));
+	if(MCPlayerController->PlayerData)
+	{
+		PlayerChunkIndex = MCPlayerController->PlayerData->PlayerChunkIndex;
+	}
+	//UpdatePlayerChunkIndex();
 	GenerateChunks();
 	TerrianGenDone.Broadcast();
 }
