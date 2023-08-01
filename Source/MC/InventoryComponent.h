@@ -82,7 +82,7 @@ public:
 	 * 优先先手持栏，优先同类物品叠加，再空余的手持栏。手持栏满了则放入背包。
 	 */
 	UFUNCTION(BlueprintCallable)
-	int32 AutoAddItemToInventory(EItemType ItemType , int32 Amount);
+	int32 AutoAddItemToInventory(FItemBase ItemBaseData);
 
 	//在背包栏指定位置添加物品,通过引用传递ItemType和Amount,表示操作结束后源物品的状态。
 	UFUNCTION(BlueprintCallable)
@@ -110,7 +110,10 @@ public:
 
 	//删除一个选中的物品。
 	UFUNCTION(BlueprintCallable)
-	void RemoveOneSelectItem();
+	FItemBase RemoveOneSelectedItem();
+	//删除所有选中的物品
+	UFUNCTION(BlueprintCallable)
+	FItemBase RemoveSelectedItem();
 	
 	//直接设置背包的函数，用于复原操作。。。合理吗？
 	UFUNCTION(BlueprintCallable)

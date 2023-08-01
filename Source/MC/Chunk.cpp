@@ -354,8 +354,9 @@ bool AChunk::SetBlock(FVector Position, EBlockType Type)
 	if (Index < 0 || Index > Blocks.Num()) return false;
 	Blocks[Index] = Type;
 	ChangedBlocks.Add(Index, Type);
-	AsyncUpdateMesh();
-	//UpdateMesh();
+	//AsyncUpdateMesh();
+	//不能异步更新。下一帧很可能要用到Mesh，如果此时还未更新好就会出问题。
+	UpdateMesh();
 	return true;
 }
 

@@ -19,6 +19,7 @@ void AMCPlayerController::SaveGamePlayerInfo()
 	USaveGamePlayer* CurSave =  NewObject<USaveGamePlayer>();
 	CurSave->PlayerChunkIndex = TerrainGenerationComponent->PlayerChunkIndex;
 	CurSave->PlayerTransform = GetPawn()->GetActorTransform();
+	CurSave->PlayerControllerRotator = GetControlRotation();
 	CurSave->CurSelectItemBarIndex = InventoryComponent->CurSelectItemBarIndex;
 	CurSave->Inventory = InventoryComponent->Inventory;
 	UGameplayStatics::SaveGameToSlot(CurSave, CurSlotName, 0);
@@ -41,6 +42,7 @@ void AMCPlayerController::BeginPlay()
 	Super::BeginPlay();
 	if(PlayerData)
 	{
+		SetControlRotation(PlayerData->PlayerControllerRotator);
 		GetPawn()->SetActorTransform(PlayerData->PlayerTransform);
 	}
 }

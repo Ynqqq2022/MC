@@ -19,6 +19,9 @@ public:
 	FIntPoint PlayerChunkIndex;
 	UPROPERTY()
 	FTransform PlayerTransform;
+	//角色的朝向受controller影响，也要保存。
+	UPROPERTY()
+	FRotator PlayerControllerRotator;
 	UPROPERTY()
 	int32 CurSelectItemBarIndex;
 	UPROPERTY()

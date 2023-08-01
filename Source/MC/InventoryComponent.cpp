@@ -113,7 +113,7 @@ EBlockType UInventoryComponent::ConvertItemTypeToBlockType(EItemType ItemType) c
 	}
 }
 
-int32 UInventoryComponent::AutoAddItemToInventory(EItemType ItemType, int32 Amount)
+int32 UInventoryComponent::AutoAddItemToInventory(FItemBase ItemBaseData)
 {
 	/*
 	 * 先检测Bar里有没有同类的，有则在上面+，满了则下一个，都满了则第一个空的。
@@ -121,6 +121,8 @@ int32 UInventoryComponent::AutoAddItemToInventory(EItemType ItemType, int32 Amou
 	 *	bar都满了，则看inventory里有没有同类的，有则在上面+，满了则下一个，都满了则第一个空的。
 	 *								没有则第一个空的。
 	 */
+	EItemType ItemType = ItemBaseData.ItemType;
+	int32 Amount = ItemBaseData.Amount;
 	int32 CurItemMaxSize = GetMaxStackSizeByItemType(ItemType);
 
 	auto SameKindPred = [ItemType, CurItemMaxSize](const FItemBase Ele)
@@ -241,13 +243,25 @@ int32 UInventoryComponent::RemoveHalfItemByIndex(int32 Index)
 		Inventory[Index].ItemType = EItemType::Nothing;
 	return AmountToRemove;
 }
-
-void UInventoryComponent::RemoveOneSelectItem()
+FItemBase UInventoryComponent::RemoveOneSelectedItem()
 {
-	if (Inventory[CurSelectItemBarIndex].Amount > 0)
+	FItemBase RemovedItem;
+	if (Inventory[CurSelectItemBarIndex].Amount > 0) 
+	{
 		--Inventory[CurSelectItemBarIndex].Amount;
+		RemovedItem.ItemType = Inventory[CurSelectItemBarIndex].ItemType;
+		RemovedItem.Amount = 1;
+	}
 	if (Inventory[CurSelectItemBarIndex].Amount <= 0)
 		Inventory[CurSelectItemBarIndex].ItemType = EItemType::Nothing;
+	return RemovedItem;
+}
+
+FItemBase UInventoryComponent::RemoveSelectedItem()
+{
+	FItemBase RemovedItemData = Inventory[CurSelectItemBarIndex];
+	Inventory[CurSelectItemBarIndex] = FItemBase();
+	return RemovedItemData;
 }
 
 void UInventoryComponent::SetItemByIndex(int32 Index, EItemType ItemType, int32 Amount)
